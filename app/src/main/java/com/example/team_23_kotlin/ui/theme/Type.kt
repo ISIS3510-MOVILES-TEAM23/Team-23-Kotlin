@@ -1,5 +1,8 @@
 package com.example.team_23_kotlin.ui.theme
 
+//fonts
+
+
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
@@ -34,6 +37,11 @@ val AppTypography = Typography(
         fontFamily = Montserrat,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp
+    ),
+    bodyLarge = TextStyle(
+        fontFamily = Montserrat,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 18.sp
     )
 )
 

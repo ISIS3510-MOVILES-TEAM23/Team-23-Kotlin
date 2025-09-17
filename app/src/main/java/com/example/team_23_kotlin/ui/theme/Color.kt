@@ -7,12 +7,13 @@ val BrandPrimary = Color(0xFF0B7CFF)
 val BrandPrimaryDark = Color(0xFF095FCC)
 val BrandSecondary = Color(0xFFFFC107)
 
-val TextPrimary = Color(0xFF0E0F12)
-val TextSecondary = Color(0xFF6C6F7A)
+val TextPrimary = Color(20,20,20)
+val TextSecondary = Color(237,237,237)
 
-val Bg = Color(0xFFF8F7FB)
-val SurfaceLight = Color(0xFFFFFFFF)
+val Bg = Color(250,250,250)
 
+val PrimaryContainer = Color(14,23,42)
+val SurfaceLight = Color(237,237,237)
 val Success = Color(0xFF22C55E)
 val Warning = Color(0xFFF59E0B)
 val Error = Color(0xFFEF4444)

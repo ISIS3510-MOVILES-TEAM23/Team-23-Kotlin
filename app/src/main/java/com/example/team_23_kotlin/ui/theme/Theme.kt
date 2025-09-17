@@ -13,6 +13,8 @@ private val LightColors = lightColorScheme(
     surface = SurfaceLight,
     onBackground = TextPrimary,
     onSurface = TextPrimary,
+
+    primaryContainer = PrimaryContainer,
     error = Error
 )
 
