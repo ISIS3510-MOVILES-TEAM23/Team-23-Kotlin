@@ -2,8 +2,8 @@ package com.example.team_23_kotlin.presentation.home
 
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
@@ -18,6 +18,71 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.PageSize
+import androidx.compose.runtime.remember
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
+import kotlin.math.roundToInt
+
+data class ProductItem(val title: String, val price: String, val imageUrl: String)
+
+@Composable
+private fun RecsCarousel(
+    items: List<ProductItem>,
+    onClick: (String) -> Unit = {}
+) {
+    val config = LocalConfiguration.current
+    val screenWidth = config.screenWidthDp.dp
+    val peek = 24.dp
+    val pageWidth = screenWidth - (peek * 2)
+
+    val pagerState = rememberPagerState(pageCount = { items.size })
+
+    HorizontalPager(
+        state = pagerState,
+        pageSize = PageSize.Fixed(pageWidth),
+        pageSpacing = 12.dp,
+        contentPadding = PaddingValues(horizontal = peek)
+    ) { page ->
+        val item = items[page]
+        SampleCard(
+            title = item.title,
+            price = item.price,
+            imageUrl = item.imageUrl,
+            onClick = onClick,
+            modifier = Modifier
+                .fillMaxWidth()
+        )
+    }
+}
+
+
+@Composable
+private fun NetworkImage(
+    url: String?,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Crop
+) {
+    val context = LocalContext.current
+    AsyncImage(
+        model = ImageRequest.Builder(context)
+            .data(url)
+            .crossfade(true)
+            .build(),
+        contentDescription = null,
+        modifier = modifier,
+        contentScale = contentScale
+    )
+}
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,8 +93,11 @@ fun HomeScreen(
     onItemClick: (String) -> Unit = {}
 ) {
     var query by rememberSaveable { mutableStateOf("") }
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
                 title = {
@@ -47,6 +115,7 @@ fun HomeScreen(
 
                     )
                 },
+                scrollBehavior = scrollBehavior,
                 colors = TopAppBarColors(containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.background,
                     navigationIconContentColor = MaterialTheme.colorScheme.background,
@@ -59,11 +128,12 @@ fun HomeScreen(
 
     ) { inner ->
         LazyColumn(
+            modifier = Modifier
+                .fillMaxSize(),
             contentPadding = PaddingValues(
                 top = inner.calculateTopPadding() + 16.dp,
                 bottom = inner.calculateBottomPadding() + 16.dp,
-                start = 16.dp,
-                end = 16.dp
+                start = 16.dp, end = 16.dp
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -90,36 +160,57 @@ fun HomeScreen(
 
 
             item {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        "Highlighted Products for you!",
-                        modifier = Modifier.fillMaxWidth(),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontSize = 25.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Justify
-                    )
-                }
+                Text(
+                    "Highlighted Products for you!",
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center // si los quieres centrados
+                )
+            }
 
+            item {
+                val recs = listOf(
+                    ProductItem("MathBook Baldor", "$50.000", "https://panamericana.vtexassets.com/arquivos/ids/482890/algebra-baldor-3-9786075502090.jpg?v=638125237314670000"),
+                    ProductItem("Harry Potter", "$100.000", "https://sm.ign.com/ign_nordic/lists/h/harry-pott/harry-potter-books-in-order-a-chronological-reading-guide_r5mm.jpg"),
+                    ProductItem("Calculus", "$80.000", "https://picsum.photos/seed/calc/600/600")
+                )
+                RecsCarousel(items = recs, onClick = onItemClick)
             }
 
 
             item {
-                Row() {
-                    SampleCard(title = "MathBook Baldor", price = "$50.000", onClick = onItemClick, modifier = Modifier.weight(1f))
-                    SampleCard(title = "Harry Potter", price = "$100.000", onClick = onItemClick, modifier = Modifier.weight(1f))
-                }
+                Text("New Posts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
 
-            item { Text("New Posts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Justify) }
-
-
-            item{
+            item {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    PostCard(title = "Biology book", description = "First-Year Biology book, Looks like new!", onClick = onItemClick, modifier = Modifier.weight(1f))
+                    PostCard(
+                        title = "Biology book",
+                        description = "First-Year Biology book, Looks like new!",
+                        imageUrl = "https://play-lh.googleusercontent.com/BNVoUFHLmyuDoun_E-WsG7j_ossatnT3Oa0ez1k1i7kkMjVzsy-LSJfQUTxcAfJqTDc",
+                        onClick = onItemClick,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
                 Row {
-                    PostCard(title = "Desk Lamp", description = "LED Desk Lamp, Looks like new!", onClick = onItemClick, modifier = Modifier.weight(1f))
+                    PostCard(
+                        title = "Desk Lamp",
+                        description = "LED Desk Lamp, Looks like new!",
+                        imageUrl = "https://m.media-amazon.com/images/I/61Ckk6bdzwL.jpg",
+                        onClick = onItemClick,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Row {
+                    PostCard(
+                        title = "Desk Lamp",
+                        description = "LED Desk Lamp, Looks like new!",
+                        imageUrl = "https://m.media-amazon.com/images/I/61Ckk6bdzwL.jpg",
+                        onClick = onItemClick,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
@@ -131,6 +222,7 @@ private fun SampleCard(
     modifier: Modifier = Modifier,
     title: String,
     price: String,
+    imageUrl: String? = null,
     onClick: (String) -> Unit = {},
 ) {
     ElevatedCard(
@@ -138,18 +230,25 @@ private fun SampleCard(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            // Placeholder de imagen
-            Box(
-                Modifier
+
+            NetworkImage(
+                url = imageUrl,
+                modifier = Modifier
                     .fillMaxWidth()
-                    .width(100.dp)
                     .aspectRatio(1f)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clip(RoundedCornerShape(16.dp)),
+                contentScale = ContentScale.Crop
             )
-            Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+
+            Text(
+                title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontWeight = FontWeight.ExtraBold,
+                style = MaterialTheme.typography.bodyLarge
+            )
             Text(price, style = MaterialTheme.typography.bodyMedium)
         }
     }
@@ -160,8 +259,13 @@ private fun PostCard(
     modifier: Modifier = Modifier,
     title: String,
     description: String,
+    imageUrl: String? = null,
     onClick: (String) -> Unit = {},
 ) {
+    val config = LocalConfiguration.current
+    val screenWidth = config.screenWidthDp.dp
+    val imageWidth = (screenWidth * 0.4f).coerceAtMost(200.dp)
+
     ElevatedCard(
         onClick = { onClick(title) },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
@@ -175,34 +279,35 @@ private fun PostCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .weight(1f),
+                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
                     text = "New",
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.primary
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Normal),
                 )
                 Text(
                     title,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     description,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Normal,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Box(
+            NetworkImage(
+                url = imageUrl,
                 modifier = Modifier
-                    .width(96.dp)
+                    .width(imageWidth)
                     .aspectRatio(1f)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop
             )
         }
     }
