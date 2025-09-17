@@ -22,7 +22,7 @@ val AppTypography = Typography(
     ),
     titleMedium = TextStyle(
         fontFamily = Montserrat,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.Bold,
         fontSize = 18.sp
     ),
     bodyMedium = TextStyle(
