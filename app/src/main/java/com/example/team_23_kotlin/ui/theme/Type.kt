@@ -1,5 +1,8 @@
 package com.example.team_23_kotlin.ui.theme
 
+//fonts
+
+
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
@@ -18,22 +21,47 @@ val AppTypography = Typography(
     titleLarge = TextStyle(
         fontFamily = Montserrat,
         fontWeight = FontWeight.Bold,
-        fontSize = 22.sp
+        fontSize = 25.sp
     ),
     titleMedium = TextStyle(
         fontFamily = Montserrat,
         fontWeight = FontWeight.Bold,
-        fontSize = 18.sp
+        fontSize = 20.sp
+    ),
+    titleSmall = TextStyle(
+        fontFamily = Montserrat,
+        fontWeight = FontWeight.Bold,
+        fontSize = 15.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = Montserrat,
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp
     ),
     bodySmall = TextStyle(
         fontFamily = Montserrat,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 14.sp
+    ),
+    bodyLarge = TextStyle(
+        fontFamily = Montserrat,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 18.sp
+    ),
+    labelLarge = TextStyle(
+        fontFamily = Montserrat,
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp
+    ),
+    labelMedium = TextStyle(
+        fontFamily = Montserrat,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp
+    ),
+    labelSmall = TextStyle(
+        fontFamily = Montserrat,
+        fontWeight = FontWeight.Normal,
+        fontSize = 18.sp
     )
 )
 
