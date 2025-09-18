@@ -3,7 +3,7 @@ package com.example.team_23_kotlin.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val BrandPrimary = Color(0xFF0B7CFF)
+val BrandPrimary = Color(0xff0e172a)
 val BrandPrimaryDark = Color(0xFF095FCC)
 val BrandSecondary = Color(0xFFFFC107)
 
