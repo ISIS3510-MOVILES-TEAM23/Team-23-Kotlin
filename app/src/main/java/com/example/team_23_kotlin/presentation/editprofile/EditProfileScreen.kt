@@ -12,10 +12,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.example.team_23_kotlin.presentation.profile.ProfileScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,10 +32,27 @@ fun EditProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edit Profile", fontWeight = FontWeight.SemiBold, fontSize = 18.sp) },
+                title = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(end = 48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Edit Profile",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.Black
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.Black)
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.Black
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -39,7 +60,8 @@ fun EditProfileScreen(
                     titleContentColor = Color.Black
                 )
             )
-        },
+        }
+        ,
         containerColor = Color.White
     ) { padding ->
         Column(
@@ -49,91 +71,116 @@ fun EditProfileScreen(
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Imagen de perfil (placeholder por ahora)
+
             Box(
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(120.dp)
                     .clip(CircleShape)
-                    .background(Color.LightGray)
-            )
+            ){
+                AsyncImage(
+                    model = "https://picsum.photos/200",
+                    contentDescription = "Foto de fondo",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.matchParentSize()
+                )
+
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             // Nombre & handle fijo
             Text(
                 text = "Sofia Ramirez",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLarge,
                 color = Color.Black
             )
             Text(
                 text = "@sofii",
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.labelSmall,
                 color = Color.Gray
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Name field
-            TextField(
-                value = state.name,
-                onValueChange = { viewModel.onEvent(EditProfileEvent.OnNameChanged(it)) },
-                label = { Text("Name") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFF0F0F0),
-                    unfocusedContainerColor = Color(0xFFF0F0F0)
-                ),
-                shape = RoundedCornerShape(8.dp)
-            )
-
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Email field
-            TextField(
-                value = state.email ?: "",
-                onValueChange = { viewModel.onEvent(EditProfileEvent.OnEmailChanged(it)) },
-                label = { Text("Email") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFF0F0F0),
-                    unfocusedContainerColor = Color(0xFFF0F0F0),
-                    disabledContainerColor = Color(0xFFF0F0F0),
-                    errorContainerColor = Color(0xFFF0F0F0)
-                ),
-                shape = RoundedCornerShape(8.dp)
-            )
-
+            // NAME FIELD
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Name",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Black,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                TextField(
+                    value = state.name,
+                    onValueChange = { viewModel.onEvent(EditProfileEvent.OnNameChanged(it)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFF0F0F0),
+                        unfocusedContainerColor = Color(0xFFF0F0F0),
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    )
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Phone field
-            TextField(
-                value = state.phone ?: "",
-                onValueChange = { viewModel.onEvent(EditProfileEvent.OnPhoneChanged(it)) },
-                label = { Text("Phone") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFF0F0F0),
-                    unfocusedContainerColor = Color(0xFFF0F0F0),
-                    disabledContainerColor = Color(0xFFF0F0F0),
-                    errorContainerColor = Color(0xFFF0F0F0)
-                ),
-                shape = RoundedCornerShape(8.dp)
-            )
+// EMAIL FIELD
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Email",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Black,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                TextField(
+                    value = state.email ?: "",
+                    onValueChange = { viewModel.onEvent(EditProfileEvent.OnEmailChanged(it)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFF0F0F0),
+                        unfocusedContainerColor = Color(0xFFF0F0F0),
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    )
+                )
+            }
 
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(24.dp))
+// PHONE FIELD
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Phone",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Black,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                TextField(
+                    value = state.phone ?: "",
+                    onValueChange = { viewModel.onEvent(EditProfileEvent.OnPhoneChanged(it)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFF0F0F0),
+                        unfocusedContainerColor = Color(0xFFF0F0F0),
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Contact Preferences
             Text(
                 text = "Contact Preferences",
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 color = Color.Black,
                 modifier = Modifier
                     .align(Alignment.Start)
@@ -151,7 +198,7 @@ fun EditProfileScreen(
                         .height(48.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Push notifications", fontSize = 14.sp)
+                    Text("Push notifications", style = MaterialTheme.typography.titleSmall, color = Color.Black, fontSize = 13.sp)
                 }
                 OutlinedButton(
                     onClick = { /* TODO: Handle email */ },
@@ -160,7 +207,7 @@ fun EditProfileScreen(
                         .height(48.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Email", fontSize = 14.sp)
+                    Text("Email", style = MaterialTheme.typography.titleSmall, color = Color.Black, fontSize = 13.sp)
                 }
             }
 
@@ -173,11 +220,16 @@ fun EditProfileScreen(
                     .fillMaxWidth()
                     .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
-                Text("Save Changes", color = Color.White, fontSize = 16.sp)
+                Text("Save Changes", color = Color.White, style = MaterialTheme.typography.titleSmall)
             }
         }
     }
 }
 
+@Preview
+@Composable
+fun EditProfileScreenPreview() {
+    EditProfileScreen(onBack = {})
+}
