@@ -1,10 +1,12 @@
 // presentation/auth/LoginScreen.kt
 package com.example.team_23_kotlin.presentation.auth
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,23 +25,28 @@ import com.example.team_23_kotlin.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.ui.text.style.TextAlign
+import com.example.team_23_kotlin.ui.theme.Montserrat
 
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onGoToSignUp: () -> Unit
 ) {
-    // ===== Estado local mínimo (sin ViewModel) =====
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
-    // ===== Colores de la referencia =====
-    val yellow = Color(0xFFF2C12E)  // título "MERCANDES"
+
+    val yellow = MaterialTheme.colorScheme.secondary
     val bg = MaterialTheme.colorScheme.background
     val black = Color(0xFF121212)
     val fieldBg = Color(0xFFF0F0F0)
+
+
 
     Box(
         modifier = Modifier
@@ -51,25 +58,26 @@ fun LoginScreen(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(30.dp))
 
-            // Logo circular (cambia por tu recurso)
             Image(
                 painter = painterResource(id = R.drawable.ic_logo_goat),
                 contentDescription = "Logo Mercandes",
-                modifier = Modifier.size(120.dp),
+                modifier = Modifier.size(150.dp),
                 contentScale = ContentScale.Fit
             )
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(20.dp))
 
             Text(
                 text = "MERCANDES",
-                style = MaterialTheme.typography.titleMedium.copy(
+                style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.5.sp
+                    letterSpacing = 1.5.sp,
+                    textAlign = TextAlign.Center
                 ),
                 color = yellow
             )
@@ -78,9 +86,10 @@ fun LoginScreen(
 
             Text(
                 text = "Login",
-                style = MaterialTheme.typography.headlineSmall.copy(
+                style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.ExtraBold
                 ),
+                fontSize = 35.sp,
                 color = MaterialTheme.colorScheme.onBackground
             )
 
@@ -149,18 +158,16 @@ fun LoginScreen(
                 shape = RoundedCornerShape(10.dp)
             )
 
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(40.dp))
 
-            // ===== Botón Sign In negro (navega directo al Home) =====
             Button(
                 onClick = {
-                    // funcionalidad baja: navega sin validar
                     onLoginSuccess()
                 },
                 enabled = !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(65.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = black,
@@ -176,9 +183,10 @@ fun LoginScreen(
                 } else {
                     Text(
                         "Sign In",
-                        style = MaterialTheme.typography.titleMedium.copy(
+                        style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.ExtraBold
-                        )
+                        ),
+                        fontSize = 30.sp
                     )
                 }
             }
@@ -193,49 +201,46 @@ fun LoginScreen(
                 Divider(modifier = Modifier.weight(1f))
                 Text(
                     "  Or  ",
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontSize = 30.sp,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Divider(modifier = Modifier.weight(1f))
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(18.dp))
 
-            // ===== Botón Google (placeholder sin lógica real) =====
-            OutlinedButton(
-                onClick = { /* no-op por ahora */ },
-                enabled = !isLoading,
+            Image(
+                painter = painterResource(id = R.drawable.android_neutral_rd_si),
+                contentDescription = "Continue with Google",
                 modifier = Modifier
+                    .height(55.dp)
                     .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                // Usa tu ícono de Google si lo tienes (ic_google)
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_logo_goat),
-                    contentDescription = "Google",
-                    modifier = Modifier.size(20.dp),
-                    tint = Color.Unspecified
-                )
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    "Sign in with Google",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
-                )
-            }
+                    .align(Alignment.CenterHorizontally)
+
+            )
+
+
         }
 
-        // ===== Footer: Sign Up (placeholder de navegación) =====
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 10.dp)
+                .padding(bottom = 5.dp),
+
+
         ) {
-            Text("Don’t have an account?  ")
+            Text("Don’t have an account?  ",
+                fontSize = 15.sp, textAlign = TextAlign.Center,
+                fontFamily = Montserrat,
+                fontWeight = FontWeight.Medium)
             Text(
                 "Sign Up",
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold,
+                color = Color(0,0,255),
+                fontFamily = Montserrat,
+                fontWeight = FontWeight.W600,
+                fontSize = 15.sp,
+                textAlign = TextAlign.Center,
                 modifier = Modifier.clickable { onGoToSignUp() }
             )
         }
