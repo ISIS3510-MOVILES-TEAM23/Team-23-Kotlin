@@ -3,7 +3,6 @@ package com.example.team_23_kotlin.presentation.categories
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,30 +13,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.team_23_kotlin.R
-
-// ---- Paleta rápida para el look del prototipo ----
-private val Navy = Color(0xFF0D1626)
-private val LightBackground = Color(0xFFF3F4F6)
-private val CardBorder = Color(0xFFE6E6E9)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoriesScreen(
     onCategoryClick: (String) -> Unit = {}
 ) {
+    val cs = MaterialTheme.colorScheme
+    val ty = MaterialTheme.typography
+    val hint = cs.onSurface.copy(alpha = 0.60f)
 
-    // Fuente de datos (cambia los drawables por los tuyos si tienen otros nombres)
     val categories = listOf(
         "Furniture" to R.drawable.ic_furniture,
         "Bikes" to R.drawable.ic_bikes,
@@ -53,97 +47,71 @@ fun CategoriesScreen(
                 title = {
                     Text(
                         "Mercandes",
-                        color = Color.White,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            platformStyle = PlatformTextStyle(includeFontPadding = false)
+                        ),
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .wrapContentHeight(Alignment.CenterVertically)
+                            .offset(y = (-14).dp)
                     )
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Navy
+                    containerColor = cs.primary
                 )
             )
-        }//,
-        //bottomBar = {
-        //    NavigationBar(containerColor = Color.White) {
-        //        NavigationBarItem(
-        //            selected = selectedTab == 0,
-        //            onClick = { /* TODO */ },
-        //            icon = { Icon(Icons.Outlined.Home, null) },
-        //            label = { Text("Home") }
-        //        )
-        //        NavigationBarItem(
-        //            selected = selectedTab == 1,
-        //            onClick = { /* TODO */ },
-        //            icon = { Icon(Icons.Outlined.List, null) },
-        //            label = { Text("Categories") }
-        //        )
-        //        NavigationBarItem(
-        //            selected = selectedTab == 2,
-        //            onClick = { /* TODO */ },
-        //            icon = { Icon(Icons.Outlined.AddCircle, null) }, // estable
-        //            label = { Text("Post") }
-        //        )
-         //       NavigationBarItem(
-          //          selected = selectedTab == 3,
-         //           onClick = { /* TODO */ },
-         //           icon = { Icon(Icons.Outlined.AddCircle, null) }, // estable
-         //           label = { Text("Messages") }
-         //       )
-         //       NavigationBarItem(
-         //           selected = selectedTab == 4,
-         //           onClick = { /* TODO */ },
-         //           icon = { Icon(Icons.Outlined.Person, null) },
-         //           label = { Text("Profile") }
-         //       )
-         //   }
-        //}
+        }
     ) { padding ->
-
-        // ---- Contenido scrollable ----
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.White)
+                .background(cs.background)
                 .padding(padding),
             contentPadding = PaddingValues(
                 start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp
             )
         ) {
             item {
-                // Search bar
                 var query by remember { mutableStateOf("") }
+                val shape = RoundedCornerShape(14.dp)
+
                 TextField(
                     value = query,
                     onValueChange = { query = it },
-                    placeholder = { Text("Search products") },
-                    leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                    placeholder = { Text("Search products", color = hint, style = ty.bodyMedium) },
+                    leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = hint) },
                     singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
+                    shape = shape,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = LightBackground,
-                        unfocusedContainerColor = LightBackground,
-                        disabledContainerColor = LightBackground,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        cursorColor = Color.Black,
-                        focusedTextColor = Color.Black,
-                        unfocusedTextColor = Color.Black
-                    )
+                        focusedContainerColor = cs.surface,
+                        unfocusedContainerColor = cs.surface,
+                        disabledContainerColor = cs.surface,
+                        focusedIndicatorColor = cs.surface,
+                        unfocusedIndicatorColor = cs.surface,
+                        disabledIndicatorColor = cs.surface,
+                        cursorColor = cs.onSurface,
+                        focusedTextColor = cs.onSurface,
+                        unfocusedTextColor = cs.onSurface
+                    ),
+                    textStyle = ty.bodyMedium
                 )
+
                 Spacer(Modifier.height(20.dp))
+
                 Text(
                     "Categories",
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF0B0B0C)
+                    color = cs.onBackground,
+                    style = ty.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
                 )
+
                 Spacer(Modifier.height(12.dp))
             }
 
-            // Lista de categorías (filtra si usas query)
             items(categories) { (title, res) ->
                 CategoryCard(
                     title = title,
@@ -152,7 +120,7 @@ fun CategoriesScreen(
                 )
             }
 
-            item { Spacer(Modifier.height(8.dp)) } // respiro final
+            item { Spacer(Modifier.height(8.dp)) }
         }
     }
 }
@@ -161,24 +129,25 @@ fun CategoriesScreen(
 private fun CategoryCard(
     title: String,
     @DrawableRes iconRes: Int,
-    onClick: () -> Unit = {},
+    onClick: () -> Unit = {}
 ) {
+    val cs = MaterialTheme.colorScheme
+    val ty = MaterialTheme.typography
     val shape = RoundedCornerShape(12.dp)
     val minHeight = 96.dp
-    val iconSize = 44.dp
+    val iconSize = 40.dp
     val horizPad = 22.dp
 
     Card(
         onClick = onClick,
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(0.dp),
+        colors = CardDefaults.cardColors(containerColor = cs.background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 10.dp)
-            .heightIn(min = 96.dp)
-            .shadow(6.dp, shape = shape, clip = false)
-            .border(1.dp, CardBorder, shape)
+            .heightIn(min = minHeight)
+            .shadow(10.dp, shape = shape, clip = false)
     ) {
         Box(
             modifier = Modifier
@@ -199,12 +168,11 @@ private fun CategoryCard(
                 Spacer(Modifier.width(18.dp))
                 Text(
                     text = title,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF101012),
+                    color = cs.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = LocalTextStyle.current.copy(
+                    style = ty.titleMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
                         platformStyle = PlatformTextStyle(includeFontPadding = false)
                     )
                 )
@@ -213,8 +181,8 @@ private fun CategoryCard(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Preview(showBackground = true)
 @Composable
 private fun CategoriesScreenPreview() {
-    CategoriesScreen()
+    MaterialTheme { CategoriesScreen() }
 }
