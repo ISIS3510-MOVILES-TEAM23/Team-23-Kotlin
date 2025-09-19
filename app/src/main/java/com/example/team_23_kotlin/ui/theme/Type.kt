@@ -35,33 +35,33 @@ val AppTypography = Typography(
     ),
     bodyMedium = TextStyle(
         fontFamily = Montserrat,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Medium,
         fontSize = 16.sp
     ),
     bodySmall = TextStyle(
         fontFamily = Montserrat,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Medium,
         fontSize = 14.sp
     ),
     bodyLarge = TextStyle(
         fontFamily = Montserrat,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Medium,
         fontSize = 18.sp
     ),
     labelLarge = TextStyle(
         fontFamily = Montserrat,
         fontWeight = FontWeight.Normal,
-        fontSize = 16.sp
+        fontSize = 18.sp
     ),
     labelMedium = TextStyle(
         fontFamily = Montserrat,
         fontWeight = FontWeight.Normal,
-        fontSize = 14.sp
+        fontSize = 16.sp
     ),
     labelSmall = TextStyle(
         fontFamily = Montserrat,
         fontWeight = FontWeight.Normal,
-        fontSize = 18.sp
+        fontSize = 14.sp
     )
 )
 
