@@ -31,6 +31,12 @@ import com.example.team_23_kotlin.presentation.editprofile.EditProfileScreen
 import com.example.team_23_kotlin.presentation.home.HomeScreen
 import com.example.team_23_kotlin.presentation.profile.ProfileScreen
 import com.example.team_23_kotlin.presentation.categories.CategoriesScreen
+import com.example.team_23_kotlin.presentation.post.PostScreen
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.ui.unit.sp
 
 
 /** ===================== Rutas ===================== **/
@@ -46,44 +52,45 @@ object Routes {
 }
 
 /** ===================== Bottom Destinations ===================== **/
+
 private data class BottomDest(
     val route: String,
     val label: String,
-    @DrawableRes val iconUnselected: Int,
-    @DrawableRes val iconSelected: Int
+    val iconUnselected: ImageVector,
+    val iconSelected: ImageVector
 )
 
-// Usa tus .webp en res/drawable
+
 private val bottomDestinations = listOf(
     BottomDest(
         route = Routes.HOME,
         label = "Home",
-        iconUnselected = R.drawable.home,            // home.webp
-        iconSelected   = R.drawable.home_select      // home_select.webp
+        iconUnselected = Icons.Outlined.Home,
+        iconSelected = Icons.Filled.Home
     ),
     BottomDest(
         route = Routes.CATEGORIES,
         label = "Categories",
-        iconUnselected = R.drawable.categories,
-        iconSelected   = R.drawable.categories_select
+        iconUnselected = Icons.Outlined.List,
+        iconSelected = Icons.Filled.List
     ),
     BottomDest(
         route = Routes.POST,
         label = "Post",
-        iconUnselected = R.drawable.post,
-        iconSelected   = R.drawable.post_select
+        iconUnselected = Icons.Outlined.AddCircle,
+        iconSelected = Icons.Filled.AddCircle
     ),
     BottomDest(
         route = Routes.MESSAGES,
         label = "Messages",
-        iconUnselected = R.drawable.messages,
-        iconSelected   = R.drawable.messages_select
+        iconUnselected = Icons.Outlined.Email,
+        iconSelected = Icons.Filled.Email
     ),
     BottomDest(
         route = Routes.PROFILE,
         label = "Profile",
-        iconUnselected = R.drawable.profile,
-        iconSelected   = R.drawable.profile_select
+        iconUnselected = Icons.Outlined.Person,
+        iconSelected = Icons.Filled.Person
     ),
 )
 
@@ -135,6 +142,15 @@ fun AppNavHost() {
                 CategoriesScreen {
                 }
             }
+
+            composable(Routes.POST) {
+                PostScreen(
+                    onBack = {},
+                    onAddPhotos = {},
+                    onSubmit = { _, _, _ -> }
+                )
+
+            }
         }
     }
 }
@@ -167,15 +183,18 @@ private fun BottomBar(
                 },
                 icon = {
                     Icon(
-                        painter = painterResource(
-                            id = if (selected) dest.iconSelected else dest.iconUnselected
-                        ),
-                        contentDescription = dest.label,
-                        tint = Color.Unspecified
+                        imageVector = if (selected) dest.iconSelected else dest.iconUnselected,
+                        contentDescription = dest.label
                     )
                 },
-                label = { Text(dest.label,
-                    fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.ExtraBold)},
+                label = {
+                    Text(
+                        dest.label,
+                        fontSize = 12.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                        maxLines = 1
+                    )
+                },
                 colors = NavigationBarItemDefaults.colors(
                     indicatorColor = Color.Transparent,
                     selectedIconColor = Color.Black,
