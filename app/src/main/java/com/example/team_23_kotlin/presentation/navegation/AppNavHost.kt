@@ -26,6 +26,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.team_23_kotlin.R
 import com.example.team_23_kotlin.presentation.auth.AuthScreen
+import com.example.team_23_kotlin.presentation.auth.LoginScreen
 import com.example.team_23_kotlin.presentation.editprofile.EditProfileScreen
 import com.example.team_23_kotlin.presentation.home.HomeScreen
 import com.example.team_23_kotlin.presentation.profile.ProfileScreen
@@ -105,7 +106,7 @@ fun AppNavHost() {
     ) { innerPadding ->
         NavHost(
             navController = nav,
-            startDestination = Routes.HOME,
+            startDestination = Routes.AUTH,
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Routes.HOME) {
@@ -114,7 +115,15 @@ fun AppNavHost() {
                 )
             }
             composable(Routes.AUTH) {
-                AuthScreen(onBack = { nav.popBackStack() })
+                LoginScreen(
+                    onLoginSuccess = {
+                        nav.navigate(Routes.HOME) {
+                            popUpTo(Routes.AUTH) { inclusive = true } // borra el login de la pila
+                            launchSingleTop = true
+                        }
+                    },
+                    onGoToSignUp = {/* Todo */}
+                )
             }
             composable(Routes.PROFILE) {
                 ProfileScreen(onGoToEdit = { nav.navigate(Routes.EDIT_PROFILE) })
