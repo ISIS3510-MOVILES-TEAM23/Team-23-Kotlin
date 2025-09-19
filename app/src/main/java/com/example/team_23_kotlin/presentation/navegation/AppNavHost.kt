@@ -3,7 +3,6 @@ package com.example.team_23_kotlin.presentation.navegation
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -11,6 +10,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -25,13 +25,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.team_23_kotlin.R
-import com.example.team_23_kotlin.presentation.auth.AuthScreen
 import com.example.team_23_kotlin.presentation.auth.LoginScreen
 import com.example.team_23_kotlin.presentation.editprofile.EditProfileScreen
 import com.example.team_23_kotlin.presentation.home.HomeScreen
 import com.example.team_23_kotlin.presentation.profile.ProfileScreen
 import com.example.team_23_kotlin.presentation.categories.CategoriesScreen
-
+import com.example.team_23_kotlin.presentation.chatlist.ChatListScreen
+import com.example.team_23_kotlin.presentation.post.PostScreen
+import com.example.team_23_kotlin.presentation.chat.ChatScreen
 
 /** ===================== Rutas ===================== **/
 object Routes {
@@ -42,8 +43,11 @@ object Routes {
     const val CATEGORIES = "categories"
     const val POST = "post"
     const val MESSAGES = "messages"
-
+    const val CHAT = "chat/{chatId}" // ruta dinámica
 }
+
+// Helper para construir la ruta de chat con ID
+fun chatRoute(chatId: String) = "chat/$chatId"
 
 /** ===================== Bottom Destinations ===================== **/
 private data class BottomDest(
@@ -58,8 +62,8 @@ private val bottomDestinations = listOf(
     BottomDest(
         route = Routes.HOME,
         label = "Home",
-        iconUnselected = R.drawable.home,            // home.webp
-        iconSelected   = R.drawable.home_select      // home_select.webp
+        iconUnselected = R.drawable.home,
+        iconSelected   = R.drawable.home_select
     ),
     BottomDest(
         route = Routes.CATEGORIES,
@@ -92,14 +96,18 @@ private val bottomDestinations = listOf(
 fun AppNavHost() {
     val nav = rememberNavController()
 
+    // Rutas donde NO queremos mostrar la bottom bar
     val noBottomBarRoutes = setOf(Routes.AUTH, Routes.EDIT_PROFILE)
 
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    // Cuando estás en chat/123, la route real es "chat/123" (no coincide con Routes.CHAT).
+    // Por eso ocultamos si comienza por "chat/".
+    val hideBottomBar = (currentRoute in noBottomBarRoutes) || (currentRoute?.startsWith("chat/") == true)
 
     Scaffold(
         bottomBar = {
-            if (currentRoute !in noBottomBarRoutes) {
+            if (!hideBottomBar) {
                 BottomBar(navController = nav, items = bottomDestinations)
             }
         }
@@ -114,6 +122,7 @@ fun AppNavHost() {
                     onGoToAuth = { nav.navigate(Routes.AUTH) },
                 )
             }
+
             composable(Routes.AUTH) {
                 LoginScreen(
                     onLoginSuccess = {
@@ -122,18 +131,45 @@ fun AppNavHost() {
                             launchSingleTop = true
                         }
                     },
-                    onGoToSignUp = {/* Todo */}
+                    onGoToSignUp = { /* TODO */ }
                 )
             }
+
             composable(Routes.PROFILE) {
                 ProfileScreen(onGoToEdit = { nav.navigate(Routes.EDIT_PROFILE) })
             }
+
+            composable(Routes.POST) {
+                PostScreen()
+            }
+
             composable(Routes.EDIT_PROFILE) {
                 EditProfileScreen(onBack = { nav.popBackStack() })
             }
+
             composable(Routes.CATEGORIES) {
-                CategoriesScreen {
+                val saveable = rememberSaveableStateHolder()
+                saveable.SaveableStateProvider(Routes.CATEGORIES) {
+                    CategoriesScreen()
                 }
+            }
+
+            // Lista de chats
+            composable(Routes.MESSAGES) {
+                ChatListScreen(
+                    onOpenChat = { chatId ->
+                        nav.navigate(chatRoute(chatId)) // navegar al detalle del chat
+                    }
+                )
+            }
+
+            // Detalle del chat (recibe chatId)
+            composable(Routes.CHAT) { backStackEntry ->
+                val chatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
+                ChatScreen(
+                    chatId = chatId,
+                    onBack = { nav.popBackStack() }
+                )
             }
         }
     }
@@ -156,6 +192,8 @@ private fun BottomBar(
 
             NavigationBarItem(
                 selected = selected,
+
+
                 onClick = {
                     navController.navigate(dest.route) {
                         launchSingleTop = true
@@ -174,8 +212,12 @@ private fun BottomBar(
                         tint = Color.Unspecified
                     )
                 },
-                label = { Text(dest.label,
-                    fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.ExtraBold)},
+                label = {
+                    Text(
+                        dest.label,
+                        fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.ExtraBold
+                    )
+                },
                 colors = NavigationBarItemDefaults.colors(
                     indicatorColor = Color.Transparent,
                     selectedIconColor = Color.Black,
@@ -187,7 +229,6 @@ private fun BottomBar(
         }
     }
 }
-
 
 private fun NavDestination?.isOnDestination(route: String): Boolean {
     return this?.hierarchy?.any { it.route == route } == true
