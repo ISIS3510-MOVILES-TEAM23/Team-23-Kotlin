@@ -37,7 +37,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.ui.unit.sp
-
+import android.net.Uri
+import androidx.navigation.NavType
+import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import com.example.team_23_kotlin.presentation.chat.ChatScreen
 
 /** ===================== Rutas ===================== **/
 object Routes {
@@ -47,7 +51,8 @@ object Routes {
     const val EDIT_PROFILE = "edit_profile"
     const val CATEGORIES = "categories"
     const val POST = "post"
-    const val MESSAGES = "messages"
+    const val CHAT = "chat/{chatId}"
+    fun chat(chatId: String) = "chat/${Uri.encode(chatId)}"
 
 }
 
@@ -81,7 +86,7 @@ private val bottomDestinations = listOf(
         iconSelected = Icons.Filled.AddCircle
     ),
     BottomDest(
-        route = Routes.MESSAGES,
+        route = Routes.CHAT,
         label = "Messages",
         iconUnselected = Icons.Outlined.Email,
         iconSelected = Icons.Filled.Email
@@ -121,6 +126,19 @@ fun AppNavHost() {
                     onGoToAuth = { nav.navigate(Routes.AUTH) },
                 )
             }
+
+            composable(
+                route = Routes.CHAT,
+                arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val chatId = backStackEntry.arguments!!.getString("chatId")!!
+                ChatScreen(
+                    chatId = chatId,
+                    onBack = { nav.popBackStack() }
+
+                )
+            }
+
             composable(Routes.AUTH) {
                 LoginScreen(
                     onLoginSuccess = {
