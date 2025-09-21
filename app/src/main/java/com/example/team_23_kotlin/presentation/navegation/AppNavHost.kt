@@ -42,6 +42,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.team_23_kotlin.presentation.chat.ChatScreen
+import com.example.team_23_kotlin.presentation.chatlist.ChatListScreen
 
 /** ===================== Rutas ===================== **/
 object Routes {
@@ -53,6 +54,8 @@ object Routes {
     const val POST = "post"
     const val CHAT = "chat/{chatId}"
     fun chat(chatId: String) = "chat/${Uri.encode(chatId)}"
+
+    const val CHATLIST = "chatlist"
 
 }
 
@@ -86,7 +89,7 @@ private val bottomDestinations = listOf(
         iconSelected = Icons.Filled.AddCircle
     ),
     BottomDest(
-        route = Routes.CHAT,
+        route = Routes.CHATLIST,
         label = "Messages",
         iconUnselected = Icons.Outlined.Email,
         iconSelected = Icons.Filled.Email
@@ -104,7 +107,7 @@ private val bottomDestinations = listOf(
 fun AppNavHost() {
     val nav = rememberNavController()
 
-    val noBottomBarRoutes = setOf(Routes.AUTH, Routes.EDIT_PROFILE)
+    val noBottomBarRoutes = setOf(Routes.AUTH, Routes.EDIT_PROFILE, Routes.CHAT)
 
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -127,17 +130,28 @@ fun AppNavHost() {
                 )
             }
 
-            composable(
-                route = Routes.CHAT,
-                arguments = listOf(navArgument("chatId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val chatId = backStackEntry.arguments!!.getString("chatId")!!
-                ChatScreen(
-                    chatId = chatId,
-                    onBack = { nav.popBackStack() }
-
+            composable(Routes.CHATLIST) {
+                ChatListScreen(
+                    onOpenChat = { id ->             // <- callback cuando elijas un chat
+                        nav.navigate(Routes.chat(id)) {
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
+
+            composable(
+            route = Routes.CHAT,
+            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
+            ChatScreen(
+                chatId = chatId,
+                onBack = { nav.popBackStack() }
+            )
+        }
+
+
 
             composable(Routes.AUTH) {
                 LoginScreen(
