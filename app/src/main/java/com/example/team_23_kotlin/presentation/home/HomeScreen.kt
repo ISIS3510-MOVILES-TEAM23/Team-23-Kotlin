@@ -35,7 +35,13 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.PlatformTextStyle
 import kotlin.math.roundToInt
 
-data class ProductItem(val title: String, val price: String, val imageUrl: String)
+data class ProductItem(
+    val id: String,
+    val title: String,
+    val price: String,
+    val imageUrl: String
+)
+
 
 @Composable
 private fun RecsCarousel(
@@ -57,6 +63,7 @@ private fun RecsCarousel(
     ) { page ->
         val item = items[page]
         SampleCard(
+            id = item.id,
             title = item.title,
             price = item.price,
             imageUrl = item.imageUrl,
@@ -169,9 +176,9 @@ fun HomeScreen(
 
             item {
                 val recs = listOf(
-                    ProductItem("MathBook Baldor", "$50.000", "https://panamericana.vtexassets.com/arquivos/ids/482890/algebra-baldor-3-9786075502090.jpg?v=638125237314670000"),
-                    ProductItem("Harry Potter", "$100.000", "https://sm.ign.com/ign_nordic/lists/h/harry-pott/harry-potter-books-in-order-a-chronological-reading-guide_r5mm.jpg"),
-                    ProductItem("Calculus", "$80.000", "https://picsum.photos/seed/calc/600/600")
+                    ProductItem("1","MathBook Baldor", "$50.000", "https://panamericana.vtexassets.com/arquivos/ids/482890/algebra-baldor-3-9786075502090.jpg?v=638125237314670000"),
+                    ProductItem("2","Harry Potter", "$100.000", "https://sm.ign.com/ign_nordic/lists/h/harry-pott/harry-potter-books-in-order-a-chronological-reading-guide_r5mm.jpg"),
+                    ProductItem("3","Calculus", "$80.000", "https://picsum.photos/seed/calc/600/600")
                 )
                 RecsCarousel(items = recs, onClick = onItemClick)
             }
@@ -184,6 +191,7 @@ fun HomeScreen(
             item {
                 Row(modifier = Modifier.fillMaxWidth()) {
                     PostCard(
+                        id = "1",
                         title = "Biology book",
                         description = "First-Year Biology book, Looks like new!",
                         imageUrl = "https://play-lh.googleusercontent.com/BNVoUFHLmyuDoun_E-WsG7j_ossatnT3Oa0ez1k1i7kkMjVzsy-LSJfQUTxcAfJqTDc",
@@ -193,6 +201,7 @@ fun HomeScreen(
                 }
                 Row {
                     PostCard(
+                        id = "2",
                         title = "Desk Lamp",
                         description = "LED Desk Lamp, Looks like new!",
                         imageUrl = "https://m.media-amazon.com/images/I/61Ckk6bdzwL.jpg",
@@ -202,6 +211,7 @@ fun HomeScreen(
                 }
                 Row {
                     PostCard(
+                        id = "3",
                         title = "Desk Lamp",
                         description = "LED Desk Lamp, Looks like new!",
                         imageUrl = "https://m.media-amazon.com/images/I/61Ckk6bdzwL.jpg",
@@ -217,13 +227,14 @@ fun HomeScreen(
 @Composable
 private fun SampleCard(
     modifier: Modifier = Modifier,
+    id: String,
     title: String,
     price: String,
     imageUrl: String? = null,
     onClick: (String) -> Unit = {},
 ) {
     ElevatedCard(
-        onClick = { onClick(title) },
+        onClick = { onClick(id) },
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -251,9 +262,11 @@ private fun SampleCard(
     }
 }
 
+
 @Composable
 private fun PostCard(
     modifier: Modifier = Modifier,
+    id: String,
     title: String,
     description: String,
     imageUrl: String? = null,
@@ -264,7 +277,7 @@ private fun PostCard(
     val imageWidth = (screenWidth * 0.4f).coerceAtMost(200.dp)
 
     ElevatedCard(
-        onClick = { onClick(title) },
+        onClick = { onClick(id) },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
@@ -309,3 +322,4 @@ private fun PostCard(
         }
     }
 }
+
