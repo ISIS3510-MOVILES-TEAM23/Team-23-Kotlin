@@ -43,6 +43,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.team_23_kotlin.presentation.chat.ChatScreen
 import com.example.team_23_kotlin.presentation.chatlist.ChatListScreen
+import com.example.team_23_kotlin.presentation.product.ProductScreen
 
 /** ===================== Rutas ===================== **/
 object Routes {
@@ -54,6 +55,9 @@ object Routes {
     const val POST = "post"
     const val CHAT = "chat/{chatId}"
     fun chat(chatId: String) = "chat/${Uri.encode(chatId)}"
+
+    const val PRODUCT = "product/{productId}"
+    fun product(productId: String) = "product/${Uri.encode(productId)}"
 
     const val CHATLIST = "chatlist"
 
@@ -127,6 +131,9 @@ fun AppNavHost() {
             composable(Routes.HOME) {
                 HomeScreen(
                     onGoToAuth = { nav.navigate(Routes.AUTH) },
+                    onItemClick = { productId ->
+                        nav.navigate("product/$productId")
+                    }
                 )
             }
 
@@ -174,6 +181,15 @@ fun AppNavHost() {
                 CategoriesScreen {
                 }
             }
+
+            composable(
+                route = Routes.PRODUCT,
+                arguments = listOf(navArgument("productId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val productId = backStackEntry.arguments?.getString("productId") ?: return@composable
+                ProductScreen(productId = productId, onBack = { nav.popBackStack() })
+            }
+
 
             composable(Routes.POST) {
                 PostScreen(
