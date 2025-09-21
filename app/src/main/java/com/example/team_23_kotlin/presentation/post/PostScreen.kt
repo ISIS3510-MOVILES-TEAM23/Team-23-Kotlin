@@ -1,18 +1,19 @@
 package com.example.team_23_kotlin.presentation.post
 
+import android.Manifest
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,19 +29,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.PlatformTextStyle
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -68,36 +65,57 @@ fun PostScreen(
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
 
-    // --- Estado persistente con TextFieldValue (selección al enfocar) ---
-    var title by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue("Play Station 5"))
-    }
-    var desc by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue("Play station 5 usada, con 2 controles y 5 juegos"))
-    }
-    var price by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue("1’800.000"))
-    }
+    // --- Estado de los campos: VACÍOS para que se vea el placeholder ---
+    var title by rememberSaveable { mutableStateOf("") }
+    var desc  by rememberSaveable { mutableStateOf("") }
+    var price by rememberSaveable { mutableStateOf("") }
 
-    // Tokens saveables: "res:<id>" o "uri:<...>"
+    // Lista de fotos (tokens: "res:<id>" o "uri:<...>")
     val thumbTokens = rememberSaveable {
         mutableStateListOf<String>().apply { addAll(thumbs.map { "res:$it" }) }
     }
 
-    // Cámara: Uri temporal y launcher
+    // Cámara
     var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
     val takePicture = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
+        ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success) pendingPhotoUri?.let { uri -> thumbTokens.add("uri:$uri") }
+        if (success) pendingPhotoUri?.let { uri -> thumbTokens.add("uri:$uri") } // APPEND (1-2-3…)
         pendingPhotoUri = null
+    }
+
+    // Permiso cámara
+    val requestCameraPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val uri = createTempImageUri(ctx)
+            pendingPhotoUri = uri
+            takePicture.launch(uri)
+        } else {
+            scope.launch { snackbarHost.showSnackbar("Camera permission denied") }
+        }
     }
 
     // Galería (múltiples)
     val pickImages = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetMultipleContents()
+        ActivityResultContracts.GetMultipleContents()
     ) { uris ->
         if (!uris.isNullOrEmpty()) thumbTokens.addAll(uris.map { "uri:$it" })
+    }
+
+    // Bottom sheet Camera/Gallery
+    var showSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    fun openCamera() {
+        onAddPhotos()
+        requestCameraPermission.launch(Manifest.permission.CAMERA) // si ya está concedido, pasa directo
+    }
+
+    fun openGallery() {
+        onAddPhotos()
+        pickImages.launch("image/*")
     }
 
     Scaffold(
@@ -128,17 +146,9 @@ fun PostScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
+            // Abre sheet para elegir Camera/Gallery
             AddPhotosTile(
-                onClick = {
-                    onAddPhotos()
-                    pickImages.launch("image/*")
-                },
-                onLongPress = {
-                    onAddPhotos()
-                    val uri = createTempImageUri(ctx)
-                    pendingPhotoUri = uri
-                    takePicture.launch(uri)
-                },
+                onClick = { showSheet = true },
                 hairline = hairline,
                 hint = hint
             )
@@ -150,18 +160,23 @@ fun PostScreen(
             val placeholders = (minSlots - thumbTokens.size).coerceAtLeast(0)
 
             LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                items(thumbTokens.size) { i ->
-                    val token = thumbTokens[i]
+                itemsIndexed(thumbTokens) { index, token ->
                     if (token.startsWith("uri:")) {
-                        ThumbRemote(uri = Uri.parse(token.removePrefix("uri:")))
+                        ThumbRemote(
+                            uri = Uri.parse(token.removePrefix("uri:")),
+                            onRemove = { thumbTokens.removeAt(index) }
+                        )
                     } else {
                         val resId = token.removePrefix("res:").toIntOrNull() ?: R.drawable.ic_playstation
-                        ThumbLocal(imageRes = resId)
+                        ThumbLocal(
+                            imageRes = resId,
+                            onRemove = { thumbTokens.removeAt(index) }
+                        )
                     }
                 }
                 items(placeholders) {
                     PlaceholderThumb(
-                        onClick = { pickImages.launch("image/*") },
+                        onClick = { showSheet = true },
                         hint = hint,
                         hairline = hairline
                     )
@@ -171,20 +186,19 @@ fun PostScreen(
             Spacer(Modifier.height(20.dp))
 
             FieldLabel("Title")
-            RoundedTextFieldValue(
+            RoundedTextField(
                 value = title,
                 onValueChange = { title = it },
                 placeholder = "Play Station 5",
                 hairline = hairline,
                 hint = hint,
-                imeAction = ImeAction.Next,
-                selectAllOnFocus = true
+                imeAction = ImeAction.Next
             )
 
             Spacer(Modifier.height(14.dp))
 
             FieldLabel("Description")
-            RoundedTextFieldValue(
+            RoundedTextField(
                 value = desc,
                 onValueChange = { desc = it },
                 placeholder = "Describe your item…",
@@ -194,8 +208,7 @@ fun PostScreen(
                 maxLines = 6,
                 hairline = hairline,
                 hint = hint,
-                imeAction = ImeAction.Next,
-                selectAllOnFocus = true
+                imeAction = ImeAction.Next
             )
 
             Text(
@@ -208,12 +221,12 @@ fun PostScreen(
             Spacer(Modifier.height(14.dp))
 
             FieldLabel("Price")
-            RoundedTextFieldValue(
+            RoundedTextField(
                 value = price,
-                onValueChange = { newV ->
-                    // Formateo de precio manteniendo cursor al final
-                    val formatted = formatPrice(newV.text)
-                    price = TextFieldValue(formatted, TextRange(formatted.length))
+                onValueChange = { new ->
+                    // Formateo al vuelo
+                    val formatted = formatPrice(new)
+                    price = formatted
                 },
                 placeholder = "0",
                 trailing = { Icon(Icons.Outlined.AttachMoney, contentDescription = "Price", tint = hint) },
@@ -221,8 +234,7 @@ fun PostScreen(
                 hairline = hairline,
                 hint = hint,
                 imeAction = ImeAction.Done,
-                onIme = { focusManager.clearFocus() },
-                selectAllOnFocus = true
+                onIme = { focusManager.clearFocus() }
             )
 
             Spacer(Modifier.height(24.dp))
@@ -230,14 +242,14 @@ fun PostScreen(
             Button(
                 onClick = {
                     focusManager.clearFocus()
-                    val cleanPrice = price.text.filter { it.isDigit() }
+                    val cleanPrice = price.filter { it.isDigit() }
                     when {
-                        title.text.isBlank() ->
+                        title.isBlank() ->
                             scope.launch { snackbarHost.showSnackbar("Please enter a title.") }
                         cleanPrice.isBlank() || cleanPrice.toLongOrNull() == null || cleanPrice.toLong() <= 0L ->
                             scope.launch { snackbarHost.showSnackbar("Please enter a valid price.") }
                         else -> {
-                            onSubmit(title.text.trim(), desc.text.trim(), price.text)
+                            onSubmit(title.trim(), desc.trim(), price)
                             scope.launch { snackbarHost.showSnackbar("Posted!") }
                         }
                     }
@@ -253,6 +265,46 @@ fun PostScreen(
                     .height(56.dp)
             ) {
                 Text("Post", style = ty.titleMedium.copy(fontWeight = FontWeight.Medium))
+            }
+        }
+    }
+
+    // Bottom sheet Camera / Gallery
+    if (showSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = {
+                        showSheet = false
+                        openCamera()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Filled.CameraAlt, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Use camera")
+                }
+                OutlinedButton(
+                    onClick = {
+                        showSheet = false
+                        openGallery()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Choose from gallery")
+                }
+                Spacer(Modifier.height(8.dp))
             }
         }
     }
@@ -281,9 +333,9 @@ private fun FieldLabel(text: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RoundedTextFieldValue(
-    value: TextFieldValue,
-    onValueChange: (TextFieldValue) -> Unit,
+private fun RoundedTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
     placeholder: String,
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
@@ -295,8 +347,7 @@ private fun RoundedTextFieldValue(
     hairline: androidx.compose.ui.graphics.Color,
     hint: androidx.compose.ui.graphics.Color,
     imeAction: ImeAction = ImeAction.Done,
-    onIme: () -> Unit = {},
-    selectAllOnFocus: Boolean = false
+    onIme: () -> Unit = {}
 ) {
     val cs = MaterialTheme.colorScheme
     val ty = MaterialTheme.typography
@@ -305,7 +356,7 @@ private fun RoundedTextFieldValue(
     TextField(
         value = value,
         onValueChange = onValueChange,
-        placeholder = { Text(placeholder, color = hint, style = ty.bodyMedium) },
+        placeholder = { Text(placeholder, color = hint, style = ty.bodyMedium) }, // <- igual que en Categories
         singleLine = singleLine,
         minLines = minLines,
         maxLines = maxLines,
@@ -328,13 +379,7 @@ private fun RoundedTextFieldValue(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
-            .border(1.dp, hairline, shape)
-            .onFocusChanged { state ->
-                if (selectAllOnFocus && state.isFocused) {
-                    val len = value.text.length
-                    onValueChange(value.copy(selection = TextRange(0, len)))
-                }
-            },
+            .border(1.dp, hairline, shape),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = cs.surface,
             unfocusedContainerColor = cs.surface,
@@ -353,13 +398,12 @@ private fun RoundedTextFieldValue(
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+/** Tile “Add more photos” */
 @Composable
 private fun AddPhotosTile(
     onClick: () -> Unit,
     hairline: androidx.compose.ui.graphics.Color,
-    hint: androidx.compose.ui.graphics.Color,
-    onLongPress: (() -> Unit)? = null
+    hint: androidx.compose.ui.graphics.Color
 ) {
     val cs = MaterialTheme.colorScheme
     val ty = MaterialTheme.typography
@@ -371,7 +415,7 @@ private fun AddPhotosTile(
             .height(160.dp)
             .border(1.dp, hairline, shape)
             .background(cs.surface, shape)
-            .combinedClickable(onClick = onClick, onLongClick = onLongPress)
+            .clickable { onClick() }
             .padding(20.dp)
     ) {
         Row(
@@ -400,7 +444,7 @@ private fun AddPhotosTile(
     }
 }
 
-/** Placeholder cuando aún no hay fotos (o para completar 3 slots) */
+/** Placeholder (o para completar a 3) */
 @Composable
 private fun PlaceholderThumb(
     onClick: () -> Unit,
@@ -428,12 +472,16 @@ private fun PlaceholderThumb(
     }
 }
 
-/** Thumbnail local (drawable) */
+/** Thumbnail local (drawable) con botón de borrar */
 @Composable
-private fun ThumbLocal(@DrawableRes imageRes: Int) {
+private fun ThumbLocal(
+    @DrawableRes imageRes: Int,
+    onRemove: () -> Unit
+) {
     val shape = RoundedCornerShape(14.dp)
     val bg = MaterialTheme.colorScheme.surface
     val hairline = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+    val chipBg = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
 
     Box(
         modifier = Modifier
@@ -448,15 +496,35 @@ private fun ThumbLocal(@DrawableRes imageRes: Int) {
             modifier = Modifier.matchParentSize(),
             contentScale = ContentScale.Crop
         )
+        Box(
+            modifier = Modifier
+                .padding(6.dp)
+                .size(26.dp)
+                .align(Alignment.TopEnd)
+                .clip(CircleShape)
+                .background(chipBg)
+                .clickable { onRemove() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Close,
+                contentDescription = "Remove",
+                tint = MaterialTheme.colorScheme.onSurface
+            )
+        }
     }
 }
 
-/** Thumbnail remoto (URI) */
+/** Thumbnail remoto (URI) con botón de borrar */
 @Composable
-private fun ThumbRemote(uri: Uri) {
+private fun ThumbRemote(
+    uri: Uri,
+    onRemove: () -> Unit
+) {
     val shape = RoundedCornerShape(14.dp)
     val bg = MaterialTheme.colorScheme.surface
     val hairline = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+    val chipBg = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
     val context = LocalContext.current
 
     Box(
@@ -475,10 +543,26 @@ private fun ThumbRemote(uri: Uri) {
             contentScale = ContentScale.Crop,
             modifier = Modifier.matchParentSize()
         )
+        Box(
+            modifier = Modifier
+                .padding(6.dp)
+                .size(26.dp)
+                .align(Alignment.TopEnd)
+                .clip(CircleShape)
+                .background(chipBg)
+                .clickable { onRemove() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Close,
+                contentDescription = "Remove",
+                tint = MaterialTheme.colorScheme.onSurface
+            )
+        }
     }
 }
 
-/* ---------- Utilidad precio simple ---------- */
+/* ---------- Precio ---------- */
 private fun formatPrice(input: String): String {
     val digits = input.filter { it.isDigit() }
     if (digits.isEmpty()) return ""
@@ -490,10 +574,4 @@ private fun formatPrice(input: String): String {
     }
     val s = out.reverse().toString()
     return if (s.length > 3) s.replaceFirst(".", "’") else s
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun PostScreenPreview() {
-    MaterialTheme { PostScreen() }
 }
