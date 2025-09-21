@@ -45,6 +45,9 @@ import com.example.team_23_kotlin.presentation.chat.ChatScreen
 import com.example.team_23_kotlin.presentation.chatlist.ChatListScreen
 import com.example.team_23_kotlin.presentation.product.ProductScreen
 import com.example.team_23_kotlin.presentation.seller.SellerScreen
+import com.example.team_23_kotlin.presentation.shared.LocationViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+
 
 /** ===================== Rutas ===================== **/
 object Routes {
@@ -115,6 +118,8 @@ private val bottomDestinations = listOf(
 fun AppNavHost() {
     val nav = rememberNavController()
 
+    val locationViewModel: LocationViewModel = hiltViewModel()
+
     val noBottomBarRoutes = setOf(Routes.AUTH, Routes.EDIT_PROFILE, Routes.CHAT)
 
     val backStackEntry by nav.currentBackStackEntryAsState()
@@ -176,8 +181,12 @@ fun AppNavHost() {
                 )
             }
             composable(Routes.PROFILE) {
-                ProfileScreen(onGoToEdit = { nav.navigate(Routes.EDIT_PROFILE) })
+                ProfileScreen(
+                    locationViewModel= locationViewModel,
+                    onGoToEdit = { nav.navigate(Routes.EDIT_PROFILE) }
+                )
             }
+
             composable(Routes.EDIT_PROFILE) {
                 EditProfileScreen(onBack = { nav.popBackStack() })
             }

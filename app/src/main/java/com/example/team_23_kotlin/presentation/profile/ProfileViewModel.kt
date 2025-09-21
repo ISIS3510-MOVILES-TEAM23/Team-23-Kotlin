@@ -39,6 +39,9 @@ class ProfileViewModel(
             }
         }
     }
+    fun onCampusStatusChanged(isInCampus: Boolean) {
+        _state.update { it.copy(isInCampus = isInCampus) }
+    }
 
     private fun loadUserProfile() {
         viewModelScope.launch {
