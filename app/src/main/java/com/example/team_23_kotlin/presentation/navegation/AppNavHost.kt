@@ -42,6 +42,9 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.team_23_kotlin.presentation.chat.ChatScreen
+import com.example.team_23_kotlin.presentation.chatlist.ChatListScreen
+import com.example.team_23_kotlin.presentation.product.ProductScreen
+import com.example.team_23_kotlin.presentation.seller.SellerScreen
 
 /** ===================== Rutas ===================== **/
 object Routes {
@@ -53,6 +56,14 @@ object Routes {
     const val POST = "post"
     const val CHAT = "chat/{chatId}"
     fun chat(chatId: String) = "chat/${Uri.encode(chatId)}"
+
+    const val PRODUCT = "product/{productId}"
+    fun product(productId: String) = "product/${Uri.encode(productId)}"
+
+    const val SELLER = "seller/{sellerId}"
+    fun seller(sellerId: String) = "seller/${Uri.encode(sellerId)}"
+
+    const val CHATLIST = "chatlist"
 
 }
 
@@ -86,7 +97,7 @@ private val bottomDestinations = listOf(
         iconSelected = Icons.Filled.AddCircle
     ),
     BottomDest(
-        route = Routes.CHAT,
+        route = Routes.CHATLIST,
         label = "Messages",
         iconUnselected = Icons.Outlined.Email,
         iconSelected = Icons.Filled.Email
@@ -104,7 +115,7 @@ private val bottomDestinations = listOf(
 fun AppNavHost() {
     val nav = rememberNavController()
 
-    val noBottomBarRoutes = setOf(Routes.AUTH, Routes.EDIT_PROFILE)
+    val noBottomBarRoutes = setOf(Routes.AUTH, Routes.EDIT_PROFILE, Routes.CHAT)
 
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -124,20 +135,34 @@ fun AppNavHost() {
             composable(Routes.HOME) {
                 HomeScreen(
                     onGoToAuth = { nav.navigate(Routes.AUTH) },
+                    onItemClick = { productId ->
+                        nav.navigate("product/$productId")
+                    }
+                )
+            }
+
+            composable(Routes.CHATLIST) {
+                ChatListScreen(
+                    onOpenChat = { id ->             // <- callback cuando elijas un chat
+                        nav.navigate(Routes.chat(id)) {
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
 
             composable(
-                route = Routes.CHAT,
-                arguments = listOf(navArgument("chatId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val chatId = backStackEntry.arguments!!.getString("chatId")!!
-                ChatScreen(
-                    chatId = chatId,
-                    onBack = { nav.popBackStack() }
+            route = Routes.CHAT,
+            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
+            ChatScreen(
+                chatId = chatId,
+                onBack = { nav.popBackStack() }
+            )
+        }
 
-                )
-            }
+
 
             composable(Routes.AUTH) {
                 LoginScreen(
@@ -161,6 +186,15 @@ fun AppNavHost() {
                 }
             }
 
+            composable(
+                route = Routes.PRODUCT,
+                arguments = listOf(navArgument("productId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val productId = backStackEntry.arguments?.getString("productId") ?: return@composable
+                ProductScreen(productId = productId, onBack = { nav.popBackStack() }, nav = nav)
+            }
+
+
             composable(Routes.POST) {
                 PostScreen(
                     onBack = {},
@@ -169,6 +203,15 @@ fun AppNavHost() {
                 )
 
             }
+
+            composable(
+                Routes.SELLER,
+                arguments = listOf(navArgument("sellerId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val sellerId = backStackEntry.arguments?.getString("sellerId") ?: return@composable
+                SellerScreen(sellerId = sellerId, onBack = { nav.popBackStack() }, onProductClick = { productId -> nav.navigate("product/$productId") } )
+            }
+
         }
     }
 }
