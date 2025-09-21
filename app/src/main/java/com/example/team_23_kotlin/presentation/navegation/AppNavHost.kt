@@ -44,6 +44,7 @@ import androidx.navigation.navArgument
 import com.example.team_23_kotlin.presentation.chat.ChatScreen
 import com.example.team_23_kotlin.presentation.chatlist.ChatListScreen
 import com.example.team_23_kotlin.presentation.product.ProductScreen
+import com.example.team_23_kotlin.presentation.seller.SellerScreen
 
 /** ===================== Rutas ===================== **/
 object Routes {
@@ -58,6 +59,9 @@ object Routes {
 
     const val PRODUCT = "product/{productId}"
     fun product(productId: String) = "product/${Uri.encode(productId)}"
+
+    const val SELLER = "seller/{sellerId}"
+    fun seller(sellerId: String) = "seller/${Uri.encode(sellerId)}"
 
     const val CHATLIST = "chatlist"
 
@@ -187,7 +191,7 @@ fun AppNavHost() {
                 arguments = listOf(navArgument("productId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val productId = backStackEntry.arguments?.getString("productId") ?: return@composable
-                ProductScreen(productId = productId, onBack = { nav.popBackStack() })
+                ProductScreen(productId = productId, onBack = { nav.popBackStack() }, nav = nav)
             }
 
 
@@ -199,6 +203,15 @@ fun AppNavHost() {
                 )
 
             }
+
+            composable(
+                Routes.SELLER,
+                arguments = listOf(navArgument("sellerId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val sellerId = backStackEntry.arguments?.getString("sellerId") ?: return@composable
+                SellerScreen(sellerId = sellerId, onBack = { nav.popBackStack() }, onProductClick = { productId -> nav.navigate("product/$productId") } )
+            }
+
         }
     }
 }

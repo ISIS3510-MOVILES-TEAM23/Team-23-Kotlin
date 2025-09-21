@@ -1,6 +1,7 @@
 package com.example.team_23_kotlin.presentation.product
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -17,6 +18,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -24,6 +26,7 @@ import coil.compose.rememberAsyncImagePainter
 fun ProductScreen(
     productId: String,
     onBack: () -> Unit,
+    nav: NavController,
     vmFactory: (String) -> ProductViewModel = { ProductViewModel(it) }
 ) {
     val viewModel: ProductViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -161,7 +164,10 @@ fun ProductScreen(
                                 Text(
                                     text = product.sellerName,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                                    modifier = Modifier.clickable {
+                                        nav.navigate("seller/${product.id}")
+                                    },
+
                                 )
                                 Text(
                                     text = "Math Student", // fijo como en el mockup
@@ -193,8 +199,8 @@ fun ProductScreen(
     }
 }
 
-@Preview
-@Composable
-fun ProductScreenPreview() {
-    ProductScreen(productId = "1", onBack = {})
-}
+//@Preview
+//@Composable
+//fun ProductScreenPreview() {
+//    ProductScreen(productId = "1", onBack = {}, nav = NavController(LocalContext.current)))
+//}
