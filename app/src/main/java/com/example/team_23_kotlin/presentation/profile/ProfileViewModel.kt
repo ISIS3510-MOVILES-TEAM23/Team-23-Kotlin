@@ -2,13 +2,17 @@ package com.example.team_23_kotlin.presentation.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.team_23_kotlin.domain.usecase.CheckInCampusUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class ProfileViewModel : ViewModel() {
+class ProfileViewModel(
+    private val checkInCampusUseCase: CheckInCampusUseCase
+) : ViewModel() {
+
 
     private val _state = MutableStateFlow(ProfileState())
     val state: StateFlow<ProfileState> = _state.asStateFlow()
@@ -38,10 +42,15 @@ class ProfileViewModel : ViewModel() {
 
     private fun loadUserProfile() {
         viewModelScope.launch {
+            val isInCampus = checkInCampusUseCase()
+            println("DEBUG: isInCampus = $isInCampus")
+
+
             val userProfile = ProfileState(
                 userName = "Sofia Ramirez",
                 userHandle = "@sofia_ramirez",
                 userRole = "Math Student",
+                isInCampus = isInCampus,
                 products = listOf(
                     Product("1", "Calculus Book", "calculus_book"),
                     Product("2", "Scientific Calculator", "scientific_calculator"),
@@ -51,4 +60,6 @@ class ProfileViewModel : ViewModel() {
             _state.update { userProfile }
         }
     }
+
+
 }

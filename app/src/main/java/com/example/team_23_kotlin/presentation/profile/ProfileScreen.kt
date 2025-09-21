@@ -2,6 +2,10 @@ package com.example.team_23_kotlin.presentation.profile
 
 import android.R
 import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
@@ -13,25 +17,77 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.team_23_kotlin.presentation.categories.CategoriesScreen
 import coil.compose.AsyncImage
+import com.example.team_23_kotlin.data.repository.LocationRepositoryImpl
+import com.example.team_23_kotlin.domain.usecase.CheckInCampusUseCase
 
 @Composable
 fun ProfileScreen(
-    viewModel: ProfileViewModel = viewModel(),
     onGoToEdit: () -> Unit
 ) {
+    val context = LocalContext.current
+    // 1. Permiso de ubicación
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                Log.d("Permission", "✅ Permission granted")
+            } else {
+                Log.e("Permission", "❌ Permission denied")
+            }
+        }
+    )
+
+// Este `remember` evita que se lance más de una vez
+    var askedPermission by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (!hasPermission && !askedPermission) {
+            askedPermission = true
+            permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+        } else {
+            Log.d("Permission", "Already granted")
+        }
+    }
+
+    val viewModel = viewModel(
+        modelClass = ProfileViewModel::class.java,
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                val repo = LocationRepositoryImpl(context)
+                val useCase = CheckInCampusUseCase(repo)
+                return ProfileViewModel(useCase) as T
+            }
+        }
+    )
+
     Scaffold(
         //bottomBar = { ProfileBottomNavBar() }
     ) { paddingValues ->
@@ -93,6 +149,20 @@ fun ProfileScreen(
 
                 Text(text = "@sofia_ramirez", style = MaterialTheme.typography.labelMedium, color = Color(0xFF666666))
                 Text(text = "Math Student", style = MaterialTheme.typography.labelMedium, color = Color(0xFF666666))
+                if (viewModel.state.collectAsState().value.isInCampus) {
+                    Text(
+                        text = "📍 En el campus",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Green
+                    )
+                } else {
+                    Text(
+                        text = "📍 Fuera del campus",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
 
                 Spacer(modifier = Modifier.height(24.dp))
 

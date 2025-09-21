@@ -3,11 +3,13 @@ package com.example.team_23_kotlin.presentation.profile
 data class ProfileState(
     val userName: String = "Sofia Ramirez",
     val userHandle: String = "@sofia_ramirez",
-    val userRole: String = "Math Student", // O enum si quieres más control
+    val userRole: String = "Math Student",
+    val isInCampus: Boolean = true, // 👈 NUEVO
     val products: List<Product> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null
 )
+
 
 data class Product(
     val id: String,
