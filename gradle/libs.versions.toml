@@ -27,6 +27,7 @@ accompanist = "0.34.0"
 ui = "1.9.1"
 playServicesLocation = "21.3.0"
 gmsBom = "16.1.0"
+roomKtx = "2.8.0"
 
 [libraries]
 androidx-compose-foundation = { module = "androidx.compose.foundation:foundation" }
@@ -64,6 +65,7 @@ play-services-location = { group = "com.google.android.gms", name = "play-servic
 play-services-bom = { module = "com.google.android.gms:play-services-bom", version.ref = "gmsBom" }
 play-services-maps = { module = "com.google.android.gms:play-services-maps" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "roomKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

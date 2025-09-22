@@ -23,5 +23,6 @@ data class ChatState(
     val error: String? = null,
     val messages: List<ChatMessage> = emptyList(), // <- tipo explícito
     val input: String = "",
-    val canSend: Boolean = false
+    val canSend: Boolean = false,
+    val showPurchaseButton: Boolean = false
 )

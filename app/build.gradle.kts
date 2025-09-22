@@ -73,6 +73,7 @@ dependencies {
     implementation(libs.coil.gif)
     implementation(libs.androidx.compose.ui)
     implementation(libs.play.services.location)
+    implementation(libs.androidx.room.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

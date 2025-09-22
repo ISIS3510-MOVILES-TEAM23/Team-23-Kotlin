@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material3.*
@@ -33,6 +34,7 @@ import com.example.team_23_kotlin.presentation.editprofile.EditProfileScreen
 fun ChatScreen(
     chatId: String,
     onBack: () -> Unit,
+    onConfirmPurchase: () -> Unit = {},
     vmFactory: (String) -> ChatViewModel = { ChatViewModel(it) }
 ) {
     val vm = remember(chatId) { vmFactory(chatId) }
@@ -76,12 +78,22 @@ fun ChatScreen(
 
         },
         bottomBar = {
-            MessageInputBar(
-                value = state.input,
-                canSend = state.canSend,
-                onChange = { vm.onEvent(ChatEvent.OnMessageInputChange(it)) },
-                onSend = { vm.onEvent(ChatEvent.SendMessage(state.input)) }
-            )
+            Column {
+                // Botón de confirmar compra (aparece condicionalmente)
+                if (state.showPurchaseButton) {
+                    PurchaseConfirmationBar(
+                        onConfirmPurchase = onConfirmPurchase,
+                        listingTitle = state.header.listingTitle ?: "Item"
+                    )
+                }
+
+                MessageInputBar(
+                    value = state.input,
+                    canSend = state.canSend,
+                    onChange = { vm.onEvent(ChatEvent.OnMessageInputChange(it)) },
+                    onSend = { vm.onEvent(ChatEvent.SendMessage(state.input)) }
+                )
+            }
         }
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
@@ -104,6 +116,63 @@ fun ChatScreen(
 /* ---------- UI pieces ---------- */
 
 @Composable
+private fun PurchaseConfirmationBar(
+    onConfirmPurchase: () -> Unit,
+    listingTitle: String
+) {
+    Surface(
+        tonalElevation = 8.dp,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "¿Listo para comprar?",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = listingTitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Button(
+                    onClick = onConfirmPurchase,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Icon(
+                        Icons.Default.ShoppingCart,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = "Confirmar Compra",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun MessageRow(msg: ChatMessage, peerAvatarUrl: String?) {
     val bubbleColor: Color
     val textColor: Color
@@ -112,8 +181,6 @@ private fun MessageRow(msg: ChatMessage, peerAvatarUrl: String?) {
     if (msg.isMine) {
         bubbleColor = MaterialTheme.colorScheme.primary
         textColor = MaterialTheme.colorScheme.onPrimary
-
-
     } else {
         bubbleColor = Color(0xFFE0E0E0)
         textColor = Color.Black
@@ -174,7 +241,6 @@ private fun Avatar(avatarUrl: String?) {
         modifier = Modifier.size(size).clip(CircleShape),
         contentScale = ContentScale.Crop
     )
-
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -236,7 +302,6 @@ private fun MessageInputBar(
                 )
             )
 
-
             Spacer(modifier = Modifier.width(8.dp))
 
             IconButton(
@@ -256,9 +321,8 @@ private fun MessageInputBar(
     }
 }
 
-
 @Preview
 @Composable
 fun ChatScreenPreview() {
-    ChatScreen(onBack = {}, chatId = "1")
+    ChatScreen(onBack = {}, chatId = "1", onConfirmPurchase = {})
 }
