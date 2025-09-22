@@ -1,5 +1,6 @@
 package com.example.team_23_kotlin.presentation.navegation
 
+import android.app.Application
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.ui.unit.sp
 import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
@@ -47,6 +49,8 @@ import com.example.team_23_kotlin.presentation.product.ProductScreen
 import com.example.team_23_kotlin.presentation.seller.SellerScreen
 import com.example.team_23_kotlin.presentation.shared.LocationViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseScreen
+import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseViewModel
 
 
 /** ===================== Rutas ===================== **/
@@ -59,15 +63,13 @@ object Routes {
     const val POST = "post"
     const val CHAT = "chat/{chatId}"
     fun chat(chatId: String) = "chat/${Uri.encode(chatId)}"
-
     const val PRODUCT = "product/{productId}"
     fun product(productId: String) = "product/${Uri.encode(productId)}"
-
     const val SELLER = "seller/{sellerId}"
     fun seller(sellerId: String) = "seller/${Uri.encode(sellerId)}"
-
     const val CHATLIST = "chatlist"
-
+    const val CONFIRMPURCHASE = "confirmpurchase/{chatId}"
+    fun confirmPurchase(chatId: String) = "confirmpurchase/${Uri.encode(chatId)}"
 }
 
 /** ===================== Bottom Destinations ===================== **/
@@ -78,7 +80,6 @@ private data class BottomDest(
     val iconUnselected: ImageVector,
     val iconSelected: ImageVector
 )
-
 
 private val bottomDestinations = listOf(
     BottomDest(
@@ -120,7 +121,7 @@ fun AppNavHost() {
 
     val locationViewModel: LocationViewModel = hiltViewModel()
 
-    val noBottomBarRoutes = setOf(Routes.AUTH, Routes.EDIT_PROFILE, Routes.CHAT)
+    val noBottomBarRoutes = setOf(Routes.AUTH, Routes.EDIT_PROFILE, Routes.CHAT, Routes.CONFIRMPURCHASE)
 
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -148,7 +149,7 @@ fun AppNavHost() {
 
             composable(Routes.CHATLIST) {
                 ChatListScreen(
-                    onOpenChat = { id ->             // <- callback cuando elijas un chat
+                    onOpenChat = { id ->
                         nav.navigate(Routes.chat(id)) {
                             launchSingleTop = true
                         }
@@ -157,29 +158,31 @@ fun AppNavHost() {
             }
 
             composable(
-            route = Routes.CHAT,
-            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val chatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
-            ChatScreen(
-                chatId = chatId,
-                onBack = { nav.popBackStack() }
-            )
-        }
-
-
+                route = Routes.CHAT,
+                arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val chatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
+                ChatScreen(
+                    chatId = chatId,
+                    onBack = { nav.popBackStack() },
+                    onConfirmPurchase = {
+                        nav.navigate(Routes.confirmPurchase(chatId))
+                    }
+                )
+            }
 
             composable(Routes.AUTH) {
                 LoginScreen(
                     onLoginSuccess = {
                         nav.navigate(Routes.HOME) {
-                            popUpTo(Routes.AUTH) { inclusive = true } // borra el login de la pila
+                            popUpTo(Routes.AUTH) { inclusive = true }
                             launchSingleTop = true
                         }
                     },
                     onGoToSignUp = {/* Todo */}
                 )
             }
+
             composable(Routes.PROFILE) {
                 ProfileScreen(
                     locationViewModel= locationViewModel,
@@ -190,6 +193,7 @@ fun AppNavHost() {
             composable(Routes.EDIT_PROFILE) {
                 EditProfileScreen(onBack = { nav.popBackStack() })
             }
+
             composable(Routes.CATEGORIES) {
                 CategoriesScreen {
                 }
@@ -203,14 +207,12 @@ fun AppNavHost() {
                 ProductScreen(productId = productId, onBack = { nav.popBackStack() }, nav = nav)
             }
 
-
             composable(Routes.POST) {
                 PostScreen(
                     onBack = {},
                     onAddPhotos = {},
                     onSubmit = { _, _, _ -> }
                 )
-
             }
 
             composable(
@@ -218,9 +220,30 @@ fun AppNavHost() {
                 arguments = listOf(navArgument("sellerId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val sellerId = backStackEntry.arguments?.getString("sellerId") ?: return@composable
-                SellerScreen(sellerId = sellerId, onBack = { nav.popBackStack() }, onProductClick = { productId -> nav.navigate("product/$productId") } )
+                SellerScreen(
+                    sellerId = sellerId,
+                    onBack = { nav.popBackStack() },
+                    onProductClick = { productId -> nav.navigate("product/$productId") }
+                )
             }
 
+            composable(
+                route = Routes.CONFIRMPURCHASE,
+                arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val chatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
+                ConfirmPurchaseScreen(
+                    chatId = chatId,
+                    onCancel = { nav.popBackStack() },
+                    onPurchaseSuccess = {
+                        // Navegar al chat de nuevo o a home
+                        nav.navigate(Routes.chat(chatId)) {
+                            popUpTo(Routes.CONFIRMPURCHASE) { inclusive = true }
+                        }
+                    },
+                    viewModel = hiltViewModel<ConfirmPurchaseViewModel>()
+                )
+            }
         }
     }
 }
@@ -276,7 +299,6 @@ private fun BottomBar(
         }
     }
 }
-
 
 private fun NavDestination?.isOnDestination(route: String): Boolean {
     return this?.hierarchy?.any { it.route == route } == true
