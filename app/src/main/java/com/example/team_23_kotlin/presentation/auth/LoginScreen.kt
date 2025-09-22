@@ -27,6 +27,8 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.navigation.compose.rememberNavController
+import com.example.team_23_kotlin.presentation.navegation.Routes
 import com.example.team_23_kotlin.ui.theme.Montserrat
 
 @Composable
@@ -34,7 +36,7 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onGoToSignUp: () -> Unit
 ) {
-
+    val nav = rememberNavController()
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
@@ -241,7 +243,9 @@ fun LoginScreen(
                 fontWeight = FontWeight.W600,
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.clickable { onGoToSignUp() }
+                modifier = Modifier.clickable {
+                    onGoToSignUp()
+                }
             )
         }
     }
