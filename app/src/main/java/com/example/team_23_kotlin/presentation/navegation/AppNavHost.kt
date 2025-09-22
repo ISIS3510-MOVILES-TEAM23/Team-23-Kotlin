@@ -49,6 +49,7 @@ import com.example.team_23_kotlin.presentation.product.ProductScreen
 import com.example.team_23_kotlin.presentation.seller.SellerScreen
 import com.example.team_23_kotlin.presentation.shared.LocationViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.team_23_kotlin.presentation.auth.SignUpScreen
 import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseScreen
 import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseViewModel
 
@@ -56,7 +57,8 @@ import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseVi
 /** ===================== Rutas ===================== **/
 object Routes {
     const val HOME = "home"
-    const val AUTH = "auth"
+    const val LOGIN = "auth/login"
+    const val SIGNUP = "auth/signup"
     const val PROFILE = "profile"
     const val EDIT_PROFILE = "edit_profile"
     const val CATEGORIES = "categories"
@@ -121,7 +123,7 @@ fun AppNavHost() {
 
     val locationViewModel: LocationViewModel = hiltViewModel()
 
-    val noBottomBarRoutes = setOf(Routes.AUTH, Routes.EDIT_PROFILE, Routes.CHAT, Routes.CONFIRMPURCHASE)
+    val noBottomBarRoutes = setOf(Routes.LOGIN, Routes.SIGNUP,Routes.EDIT_PROFILE, Routes.CHAT, Routes.CONFIRMPURCHASE)
 
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -135,12 +137,12 @@ fun AppNavHost() {
     ) { innerPadding ->
         NavHost(
             navController = nav,
-            startDestination = Routes.AUTH,
+            startDestination = Routes.LOGIN,
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Routes.HOME) {
                 HomeScreen(
-                    onGoToAuth = { nav.navigate(Routes.AUTH) },
+                    onGoToAuth = { nav.navigate(Routes.LOGIN) },
                     onItemClick = { productId ->
                         nav.navigate("product/$productId")
                     }
@@ -171,15 +173,26 @@ fun AppNavHost() {
                 )
             }
 
-            composable(Routes.AUTH) {
+            composable(Routes.LOGIN) {
                 LoginScreen(
                     onLoginSuccess = {
                         nav.navigate(Routes.HOME) {
-                            popUpTo(Routes.AUTH) { inclusive = true }
+                            popUpTo(Routes.LOGIN) { inclusive = true }
                             launchSingleTop = true
                         }
                     },
-                    onGoToSignUp = {/* Todo */}
+                    onGoToSignUp = {
+                        nav.navigate(Routes.SIGNUP)
+                    }
+                )
+            }
+
+            composable(Routes.SIGNUP) {
+                SignUpScreen(
+                    onSubmit = { form ->
+                        nav.popBackStack()
+                    },
+                    onGoToLogin = { nav.popBackStack() }
                 )
             }
 
