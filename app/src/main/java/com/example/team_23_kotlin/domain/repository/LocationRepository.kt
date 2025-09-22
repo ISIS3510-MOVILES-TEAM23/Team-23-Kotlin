@@ -4,4 +4,5 @@ import android.location.Location
 
 interface LocationRepository {
     suspend fun getCurrentLocation(): Location?
+    fun isInCampus(location: Location?): Boolean
 }

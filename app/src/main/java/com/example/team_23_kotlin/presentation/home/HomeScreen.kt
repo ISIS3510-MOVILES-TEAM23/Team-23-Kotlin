@@ -1,6 +1,11 @@
 package com.example.team_23_kotlin.presentation.home
 
 
+import HomeViewModel
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.*
@@ -33,7 +38,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.PlatformTextStyle
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.team_23_kotlin.data.repository.LocationRepositoryImpl
+import com.example.team_23_kotlin.domain.usecase.CheckInCampusUseCase
 import kotlin.math.roundToInt
+import androidx.lifecycle.ViewModelProvider
 
 data class ProductItem(
     val id: String,
@@ -101,6 +112,42 @@ fun HomeScreen(
     onSearch: (String) -> Unit = {},
     onItemClick: (String) -> Unit = {}
 ) {
+    val context = LocalContext.current
+
+    // ViewModel con ubicación
+    val viewModel: HomeViewModel = viewModel(factory = object : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            val repo = LocationRepositoryImpl(context)
+            val useCase = CheckInCampusUseCase(repo)
+            return HomeViewModel(useCase) as T
+        }
+    })
+
+    val isInCampus by viewModel.isInCampus.collectAsState()
+
+    // Permisos
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            if (granted) {
+                viewModel.refreshCampusStatus()
+            }
+        }
+    )
+
+    LaunchedEffect(Unit) {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            viewModel.refreshCampusStatus()
+        } else {
+            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
     var query by rememberSaveable { mutableStateOf("") }
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
