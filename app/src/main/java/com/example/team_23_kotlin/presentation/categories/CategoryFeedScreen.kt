@@ -49,14 +49,31 @@ fun CategoryFeedScreen(
     ) { padding ->
         when {
             state.isLoading -> Box(
-                Modifier.fillMaxSize().padding(padding),
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
                 contentAlignment = Alignment.Center
             ) { CircularProgressIndicator() }
 
-            state.error != null   -> Box(
-                Modifier.fillMaxSize().padding(padding),
+            state.error != null -> Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
                 contentAlignment = Alignment.Center
             ) { Text("Error: ${state.error}") }
+
+            state.items.isEmpty() -> Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "No posts available in this category.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             else -> LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
@@ -79,6 +96,7 @@ fun CategoryFeedScreen(
         }
     }
 }
+
 
 @Composable
 private fun CategoryItemCard(

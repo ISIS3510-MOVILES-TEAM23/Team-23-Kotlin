@@ -70,8 +70,9 @@ object Routes {
     const val PROFILE = "profile"
     const val EDIT_PROFILE = "edit_profile"
     const val CATEGORIES = "categories"
-    const val CATEGORY_FEED = "category/{cid}/{title}"
-    fun categoryFeed(cid: String, title: String) = "category/${Uri.encode(cid)}/${Uri.encode(title)}"
+    const val CATEGORY_FEED = "category/{categoryId}/{categoryTitle}"
+    fun categoryFeed(categoryId: String, categoryTitle: String) =
+        "category/$categoryId/${Uri.encode(categoryTitle)}"
 
     const val POST = "post"
     const val CHAT = "chat/{chatId}"
@@ -280,37 +281,30 @@ fun AppNavHost() {
 
             composable(Routes.CATEGORIES) {
                 CategoriesScreen(
-                    onCategoryClick = { title ->
-                        val id = when (title.lowercase()) {
-                            "books" -> "c123"
-                            "furniture" -> "f001"
-                            "bikes" -> "b001"
-                            "electronics" -> "e001"
-                            "clothes" -> "cl001"
-                            "tickets" -> "t001"
-                            else -> "c123"
-                        }
-                        nav.navigate(Routes.categoryFeed(id, title))
+                    onCategoryClick = { categoryId ->
+                        nav.navigate(Routes.categoryFeed(categoryId, "Category"))
                     }
                 )
             }
 
+
             composable(
                 route = Routes.CATEGORY_FEED,
                 arguments = listOf(
-                    navArgument("cid") { type = NavType.StringType },
-                    navArgument("title") { type = NavType.StringType }
+                    navArgument("categoryId") { type = NavType.StringType },
+                    navArgument("categoryTitle") { type = NavType.StringType }
                 )
             ) { backStackEntry ->
-                val cid   = backStackEntry.arguments?.getString("cid") ?: return@composable
-                val title = backStackEntry.arguments?.getString("title") ?: "Category"
+                val categoryId = backStackEntry.arguments?.getString("categoryId") ?: return@composable
+                val categoryTitle = backStackEntry.arguments?.getString("categoryTitle") ?: ""
                 CategoryFeedScreen(
-                    categoryId = cid,
-                    categoryTitle = title,
+                    categoryId = categoryId,
+                    categoryTitle = categoryTitle,
                     onBack = { nav.popBackStack() },
                     onItemClick = { productId -> nav.navigate(Routes.product(productId)) }
                 )
             }
+
 
 
             composable(

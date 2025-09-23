@@ -31,7 +31,6 @@ class CategoryFeedViewModel(
         val flow = callbackFlow<List<PostEntity>> {
             val categoryRef = db.document("/category/$categoryId")
 
-            // SIN orderBy -> no requiere índice compuesto
             val query = db.collection("posts")
                 .whereEqualTo("status", "active")
                 .whereEqualTo("category", categoryRef)
@@ -42,7 +41,6 @@ class CategoryFeedViewModel(
                     return@addSnapshotListener
                 }
 
-                // Ordenamos por created_at en memoria (desc)
                 val docs = snap?.documents.orEmpty().sortedByDescending { d ->
                     (d.get("created_at") as? com.google.firebase.Timestamp)
                         ?.toDate()
