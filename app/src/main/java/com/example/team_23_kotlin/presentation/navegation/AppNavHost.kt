@@ -273,8 +273,8 @@ fun AppNavHost() {
             }
 
             composable(Routes.CATEGORIES) {
-                CategoriesScreen {
-                }
+                CategoriesScreen(onCategoryClick = {
+                })
             }
 
             composable(

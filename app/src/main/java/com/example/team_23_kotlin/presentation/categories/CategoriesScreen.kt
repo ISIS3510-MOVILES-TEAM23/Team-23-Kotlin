@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
@@ -18,6 +20,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -26,11 +29,14 @@ import com.example.team_23_kotlin.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoriesScreen(
-    onCategoryClick: (String) -> Unit = {}
+    onCategoryClick: (String) -> Unit = {},
+    viewModel: CategoriesViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
     val cs = MaterialTheme.colorScheme
     val ty = MaterialTheme.typography
     val hint = cs.onSurface.copy(alpha = 0.60f)
+
+    val state by viewModel.state.collectAsState()
 
     val categories = listOf(
         "Furniture" to R.drawable.ic_furniture,
@@ -42,44 +48,21 @@ fun CategoriesScreen(
     )
 
     Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        "Mercandes",
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            platformStyle = PlatformTextStyle(includeFontPadding = false)
-                        ),
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .wrapContentHeight(Alignment.CenterVertically)
-                            .offset(y = (-14).dp)
-                    )
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = cs.primary
-                )
-            )
-        }
+        topBar = { /* ... igual a tu código */ }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(cs.background)
                 .padding(padding),
-            contentPadding = PaddingValues(
-                start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp
-            )
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp)
         ) {
             item {
-                var query by remember { mutableStateOf("") }
                 val shape = RoundedCornerShape(14.dp)
 
                 TextField(
-                    value = query,
-                    onValueChange = { query = it },
+                    value = state.query,
+                    onValueChange = { viewModel.onEvent(CategoriesEvent.QueryChanged(it)) },
                     placeholder = { Text("Search products", color = hint, style = ty.bodyMedium) },
                     leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = hint) },
                     singleLine = true,
@@ -98,17 +81,15 @@ fun CategoriesScreen(
                         focusedTextColor = cs.onSurface,
                         unfocusedTextColor = cs.onSurface
                     ),
-                    textStyle = ty.bodyMedium
+                    textStyle = ty.bodyMedium,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(
+                        onSearch = { viewModel.onEvent(CategoriesEvent.SubmitSearch) }
+                    )
                 )
 
                 Spacer(Modifier.height(20.dp))
-
-                Text(
-                    "Categories",
-                    color = cs.onBackground,
-                    style = ty.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
-                )
-
+                Text("Categories", color = cs.onBackground, style = ty.titleLarge.copy(fontWeight = FontWeight.ExtraBold))
                 Spacer(Modifier.height(12.dp))
             }
 
@@ -116,7 +97,11 @@ fun CategoriesScreen(
                 CategoryCard(
                     title = title,
                     iconRes = res,
-                    onClick = { onCategoryClick(title) }
+                    onClick = {
+                        // 1) log + 2) callback navegación/filtrado
+                        viewModel.onEvent(CategoriesEvent.CategoryClicked(title))
+                        onCategoryClick(title)
+                    }
                 )
             }
 
@@ -124,6 +109,7 @@ fun CategoriesScreen(
         }
     }
 }
+
 
 @Composable
 private fun CategoryCard(

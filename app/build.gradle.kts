@@ -48,6 +48,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.foundation)
     val firebaseBom = platform("com.google.firebase:firebase-bom:33.3.0")
     implementation(firebaseBom)
     implementation(libs.firebase.auth.ktx)
