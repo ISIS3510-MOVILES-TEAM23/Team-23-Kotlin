@@ -34,7 +34,7 @@ class LocationRepositoryImpl(private val context: Context) : LocationRepository 
     override fun isInCampus(location: Location?): Boolean {
         val uniLatitude = 4.6014581
         val uniLongitude = -74.0687083
-        val radiusMeters = 400
+        val radiusMeters = 1000
 
         return location?.let {
             val distance = FloatArray(1)
