@@ -114,24 +114,23 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
 
-    // ViewModel con ubicación
+    // ViewModel con ubicación (igual que lo tienes)
     val viewModel: HomeViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             val repo = LocationRepositoryImpl(context)
             val useCase = CheckInCampusUseCase(repo)
+            @Suppress("UNCHECKED_CAST")
             return HomeViewModel(useCase) as T
         }
     })
 
     val isInCampus by viewModel.isInCampus.collectAsState()
 
-    // Permisos
+    // Permisos (igual que lo tienes)
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { granted ->
-            if (granted) {
-                viewModel.refreshCampusStatus()
-            }
+            if (granted) viewModel.refreshCampusStatus()
         }
     )
 
@@ -140,7 +139,6 @@ fun HomeScreen(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
-
         if (hasPermission) {
             viewModel.refreshCampusStatus()
         } else {
@@ -149,25 +147,27 @@ fun HomeScreen(
     }
 
     var query by rememberSaveable { mutableStateOf("") }
+
+    // 1) Define el comportamiento de scroll
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
-
+    // 2) Evita que Scaffold meta insets automáticos (nosotros los controlamos)
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        contentWindowInsets = WindowInsets(0),
         topBar = {
             CenterAlignedTopAppBar(
+                // 3) PÁSALO AQUÍ 👇
+                scrollBehavior = scrollBehavior,
                 title = {
                     Text(
                         "Mercandes",
                         color = MaterialTheme.colorScheme.onPrimary,
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
+                            // Quita el offset negativo para evitar saltos
                             platformStyle = PlatformTextStyle(includeFontPadding = false)
-                        ),
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .wrapContentHeight(Alignment.CenterVertically)
-                            .offset(y = (-14).dp)
+                        )
                     )
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -175,15 +175,17 @@ fun HomeScreen(
                 )
             )
         }
-
-
     ) { inner ->
+
+        // 4) Consumimos los insets del Scaffold para que no se dupliquen
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize(),
+                .fillMaxSize()
+                .padding(inner)              // usa el padding del Scaffold tal cual
+                .consumeWindowInsets(inner), // evita doble aplicación de insets
             contentPadding = PaddingValues(
-                top = inner.calculateTopPadding() + 16.dp,
-                bottom = inner.calculateBottomPadding() + 16.dp,
+                top = 16.dp,
+                bottom = 16.dp,
                 start = 16.dp, end = 16.dp
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -209,7 +211,6 @@ fun HomeScreen(
                 )
             }
 
-
             item {
                 Text(
                     "Highlighted Products for you!",
@@ -217,24 +218,27 @@ fun HomeScreen(
                     style = MaterialTheme.typography.titleLarge,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center // si los quieres centrados
+                    textAlign = TextAlign.Center
                 )
             }
 
+            // HorizontalPager funciona bien dentro de LazyColumn, pero evita alturas ambiguas
             item {
                 val recs = listOf(
                     ProductItem("1","MathBook Baldor", "$50.000", "https://panamericana.vtexassets.com/arquivos/ids/482890/algebra-baldor-3-9786075502090.jpg?v=638125237314670000"),
                     ProductItem("2","Harry Potter", "$100.000", "https://sm.ign.com/ign_nordic/lists/h/harry-pott/harry-potter-books-in-order-a-chronological-reading-guide_r5mm.jpg"),
                     ProductItem("3","Calculus", "$80.000", "https://picsum.photos/seed/calc/600/600")
                 )
+                // Si vieras “jank”, envuelve en un Box con altura mínima:
+                // Box(Modifier.fillMaxWidth().heightIn(min = 0.dp)) { ... }
                 RecsCarousel(items = recs, onClick = onItemClick)
             }
-
 
             item {
                 Text("New Posts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
 
+            // tus PostCard como estaban
             item {
                 Row(modifier = Modifier.fillMaxWidth()) {
                     PostCard(
@@ -270,6 +274,7 @@ fun HomeScreen(
         }
     }
 }
+
 
 @Composable
 private fun SampleCard(
