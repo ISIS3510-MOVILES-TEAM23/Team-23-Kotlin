@@ -8,18 +8,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.example.team_23_kotlin.core.ui.NetworkImage
+import com.example.team_23_kotlin.data.posts.FirestorePostsRepository
+import com.example.team_23_kotlin.data.posts.PostsRepository
+import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,13 +30,24 @@ fun ProductScreen(
     productId: String,
     onBack: () -> Unit,
     nav: NavController,
-    vmFactory: (String) -> ProductViewModel = { ProductViewModel(it) }
+    // ⬇️ AHORA el factory recibe UN REPO, no un String
+    vmFactory: (PostsRepository) -> ProductViewModel = { repo -> ProductViewModel(repo) }
 ) {
+    // 1) Crea el repo una sola vez
+    val repo = remember { FirestorePostsRepository(FirebaseFirestore.getInstance()) }
+
+    // 2) Crea el VM con ese repo
     val viewModel: ProductViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
         override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-            return vmFactory(productId) as T
+            @Suppress("UNCHECKED_CAST")
+            return vmFactory(repo) as T
         }
     })
+
+    // 3) Dispara la carga cuando cambia el id
+    LaunchedEffect(productId) {
+        viewModel.onEvent(ProductEvent.LoadProduct(productId))
+    }
 
     val state by viewModel.state.collectAsState()
 
@@ -43,14 +57,14 @@ fun ProductScreen(
                 title = {
                     Text(
                         text = "Product details",
-                        color = MaterialTheme.colorScheme.onPrimary, // texto blanco si el fondo es primary
+                        color = MaterialTheme.colorScheme.onPrimary,
                         style = MaterialTheme.typography.titleLarge
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
@@ -61,9 +75,7 @@ fun ProductScreen(
                 )
             )
         }
-
     ) { padding ->
-
         when {
             state.isLoading -> {
                 Box(
@@ -71,22 +83,16 @@ fun ProductScreen(
                         .fillMaxSize()
                         .padding(padding),
                     contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+                ) { CircularProgressIndicator() }
             }
-
             state.error != null -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding),
                     contentAlignment = Alignment.Center
-                ) {
-                    Text("Error: ${state.error}")
-                }
+                ) { Text("Error: ${state.error}") }
             }
-
             else -> {
                 state.product?.let { product ->
                     Column(
@@ -95,112 +101,73 @@ fun ProductScreen(
                             .padding(20.dp)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        // Imagen principal
-                        Image(
-                            painter = rememberAsyncImagePainter(product.imageUrl),
-                            contentDescription = product.title,
-                            contentScale = ContentScale.Crop,
+                        // Imagen principal (usa tu componente reutilizable)
+                        NetworkImage(
+                            url = product.imageUrl,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(240.dp)
-                                .clip(RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(16.dp)),
+                            contentScale = ContentScale.Crop
                         )
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(Modifier.height(24.dp))
 
-                        // Título
                         Text(
                             text = product.title,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(Modifier.height(8.dp))
 
-                        // Descripción
-                        Text(
-                            text = product.description,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Text(product.description, style = MaterialTheme.typography.bodyMedium)
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(Modifier.height(24.dp))
 
-                        // Precio
-                        Text(
-                            text = "Price",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = product.price,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Text("Price", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(product.price, style = MaterialTheme.typography.bodyMedium)
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(Modifier.height(24.dp))
 
-                        // Seller
-                        Text(
-                            text = "Seller",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 8.dp)
-                        ) {
+                        Text("Seller", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                             Image(
-                                painter = rememberAsyncImagePainter("https://randomuser.me/api/portraits/women/5.jpg"), // avatar mock
+                                painter = rememberAsyncImagePainter("https://randomuser.me/api/portraits/women/5.jpg"),
                                 contentDescription = "Seller Avatar",
                                 contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
+                                modifier = Modifier.size(40.dp).clip(CircleShape)
                             )
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
+                            Spacer(Modifier.width(12.dp))
                             Column {
                                 Text(
                                     text = product.sellerName,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.clickable {
-                                        nav.navigate("seller/${product.id}")
-                                    },
-
+                                    modifier = Modifier.clickable { nav.navigate("seller/${product.id}") }
                                 )
                                 Text(
-                                    text = "Math Student", // fijo como en el mockup
+                                    text = "Math Student",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(Modifier.height(32.dp))
 
-                        // Botón de contacto
                         Button(
-                            onClick = { /* TODO: abrir chat o acción */ },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp),
+                            onClick = { /* TODO abrir chat */ },
+                            modifier = Modifier.fillMaxWidth().height(50.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                         ) {
                             Text("Contact", style = MaterialTheme.typography.titleSmall)
                         }
 
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(Modifier.height(20.dp))
                     }
                 }
             }
         }
     }
 }
-
-//@Preview
-//@Composable
-//fun ProductScreenPreview() {
-//    ProductScreen(productId = "1", onBack = {}, nav = NavController(LocalContext.current)))
-//}

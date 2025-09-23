@@ -2,46 +2,44 @@ package com.example.team_23_kotlin.presentation.product
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import com.example.team_23_kotlin.data.posts.PostsRepository
 import kotlinx.coroutines.launch
 
-class ProductViewModel(productId: String) : ViewModel() {
+class ProductViewModel(
+    private val repo: PostsRepository
+) : ViewModel() {
 
-    private val _state = MutableStateFlow(ProductState())
-    val state: StateFlow<ProductState> = _state
-
-    init {
-        onEvent(ProductEvent.LoadProduct(productId))
-    }
+    private val _state = kotlinx.coroutines.flow.MutableStateFlow(ProductState())
+    val state: kotlinx.coroutines.flow.StateFlow<ProductState> = _state
 
     fun onEvent(event: ProductEvent) {
         when (event) {
-            is ProductEvent.LoadProduct -> loadProduct(event.productId)
+            is ProductEvent.LoadProduct -> load(event.productId)
         }
     }
 
-    private fun loadProduct(productId: String) {
+    private fun load(productId: String) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true)
+            _state.value = _state.value.copy(isLoading = true, error = null)
             try {
-                // Simulación de carga de datos
-                delay(1000)
+                val entity = repo.getPostById(productId)
 
-                val mock = ProductUiModel(
-                    id = productId,
-                    title = "Audífonos Sony WH-1000XM5",
-                    description = "Cancelación activa de ruido, batería de 30 horas, y sonido Hi-Res.",
-                    price = "$1.200.000",
-                    imageUrl = "https://picsum.photos/400",
-                    sellerName = "Laura Torres",
-                    sellerRating = 4.6f
+                val ui = ProductUiModel(
+                    id = entity.id,
+                    title = entity.title,
+                    description = entity.description,
+                    price = "$${entity.price}",               // formateo simple
+                    imageUrl = entity.images.firstOrNull().orEmpty(),
+                    sellerName = entity.userRef.substringAfterLast("/").ifBlank { "Seller" },
+                    sellerRating = 4.5f                       // placeholder (aún no hay rating)
                 )
 
-                _state.value = ProductState(product = mock, isLoading = false)
+                _state.value = ProductState(product = ui, isLoading = false)
             } catch (e: Exception) {
-                _state.value = _state.value.copy(error = "Error al cargar el producto", isLoading = false)
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Error loading product"
+                )
             }
         }
     }
