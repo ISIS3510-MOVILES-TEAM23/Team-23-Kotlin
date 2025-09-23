@@ -39,6 +39,11 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.ui.unit.sp
 import android.net.Uri
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
@@ -49,6 +54,8 @@ import com.example.team_23_kotlin.presentation.product.ProductScreen
 import com.example.team_23_kotlin.presentation.seller.SellerScreen
 import com.example.team_23_kotlin.presentation.shared.LocationViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.team_23_kotlin.presentation.auth.LoginAuthViewModel
+import com.example.team_23_kotlin.presentation.auth.SignUpAuthViewModel
 import com.example.team_23_kotlin.presentation.auth.SignUpScreen
 import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseScreen
 import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseViewModel
@@ -174,26 +181,84 @@ fun AppNavHost() {
             }
 
             composable(Routes.LOGIN) {
+                val vm: LoginAuthViewModel = hiltViewModel()
+                var error by remember { mutableStateOf<String?>(null) }
+
                 LoginScreen(
-                    onLoginSuccess = {
-                        nav.navigate(Routes.HOME) {
-                            popUpTo(Routes.LOGIN) { inclusive = true }
-                            launchSingleTop = true
-                        }
+                    onLogin = { email, password, setLoading ->
+                        setLoading(true)
+                        vm.signIn(
+                            email = email,
+                            password = password,
+                            onSuccess = {
+                                setLoading(false)
+                                // navega al Home y limpia el backstack de Login
+                                nav.navigate(Routes.HOME) {
+                                    popUpTo(Routes.LOGIN) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            },
+                            onError = { msg ->
+                                setLoading(false)
+                                error = msg
+                            }
+                        )
                     },
-                    onGoToSignUp = {
-                        nav.navigate(Routes.SIGNUP)
-                    }
+                    onGoToSignUp = { nav.navigate(Routes.SIGNUP) },
+                    errorMessage = error
                 )
             }
 
+
+
             composable(Routes.SIGNUP) {
+                val vm: SignUpAuthViewModel = hiltViewModel()
+                var error by remember { mutableStateOf<String?>(null) }
+                var showVerifyDialog by remember { mutableStateOf(false) }
+
                 SignUpScreen(
                     onSubmit = { form ->
-                        nav.popBackStack()
+                        vm.register(
+                            form = form,
+                            onSuccess = {
+                                error = null
+                                showVerifyDialog = true
+                            },
+                            onError = { msg -> error = msg }
+                        )
                     },
                     onGoToLogin = { nav.popBackStack() }
                 )
+
+
+                if (showVerifyDialog) {
+                    AlertDialog(
+                        onDismissRequest = { },
+                        title = { Text("Verifica tu correo") },
+                        text = {
+                            Text(
+                                "Hemos creado tu cuenta y enviamos un email de verificación a tu dirección institucional. " +
+                                        "Por favor revisa tu bandeja y confirma para poder iniciar sesión."
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showVerifyDialog = false
+                                    nav.popBackStack()
+                                }
+                            ) { Text("Entendido") }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = {
+                                    showVerifyDialog = false
+                                    nav.popBackStack()
+                                }
+                            ) { Text("Ir a Login") }
+                        }
+                    )
+                }
             }
 
             composable(Routes.PROFILE) {

@@ -1,13 +1,14 @@
 // presentation/auth/LoginScreen.kt
 package com.example.team_23_kotlin.presentation.auth
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,37 +19,30 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.team_23_kotlin.R
-
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.ui.text.style.TextAlign
-import androidx.navigation.compose.rememberNavController
-import com.example.team_23_kotlin.presentation.navegation.Routes
 import com.example.team_23_kotlin.ui.theme.Montserrat
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit,
-    onGoToSignUp: () -> Unit
+    // ⬇️ CAMBIOS: en vez de onLoginSuccess vacío, pasamos correo/clave y un setter de loading
+    onLogin: (email: String, password: String, setLoading: (Boolean) -> Unit) -> Unit,
+    onGoToSignUp: () -> Unit,
+    errorMessage: String? = null                         // ⬅️ opcional: para mostrar errores
 ) {
-    val nav = rememberNavController()
+    // 🚫 Quita rememberNavController() aquí
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
-
     val yellow = MaterialTheme.colorScheme.secondary
     val bg = MaterialTheme.colorScheme.background
     val black = Color(0xFF121212)
     val fieldBg = Color(0xFFF0F0F0)
-
-
 
     Box(
         modifier = Modifier
@@ -160,11 +154,21 @@ fun LoginScreen(
                 shape = RoundedCornerShape(10.dp)
             )
 
-            Spacer(Modifier.height(40.dp))
+            // ⬇️ Mostrar error (opcional)
+            if (!errorMessage.isNullOrBlank()) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            Spacer(Modifier.height(30.dp))
 
             Button(
                 onClick = {
-                    onLoginSuccess()
+                    onLogin(email, password) { loading -> isLoading = loading }  // ⬅️ usa el VM
                 },
                 enabled = !isLoading,
                 modifier = Modifier
@@ -219,23 +223,20 @@ fun LoginScreen(
                     .height(55.dp)
                     .fillMaxWidth()
                     .align(Alignment.CenterHorizontally)
-
             )
-
-
         }
 
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 5.dp),
-
-
         ) {
-            Text("Don’t have an account?  ",
+            Text(
+                "Don’t have an account?  ",
                 fontSize = 15.sp, textAlign = TextAlign.Center,
                 fontFamily = Montserrat,
-                fontWeight = FontWeight.Medium)
+                fontWeight = FontWeight.Medium
+            )
             Text(
                 "Sign Up",
                 color = Color(0,0,255),
@@ -243,9 +244,7 @@ fun LoginScreen(
                 fontWeight = FontWeight.W600,
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.clickable {
-                    onGoToSignUp()
-                }
+                modifier = Modifier.clickable { onGoToSignUp() }
             )
         }
     }
