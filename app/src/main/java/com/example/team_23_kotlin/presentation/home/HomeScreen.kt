@@ -1,109 +1,55 @@
 package com.example.team_23_kotlin.presentation.home
 
-
 import HomeViewModel
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PageSize
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Modifier 
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.CardDefaults
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.pager.PageSize
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.text.PlatformTextStyle
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.team_23_kotlin.data.repository.LocationRepositoryImpl
 import com.example.team_23_kotlin.domain.usecase.CheckInCampusUseCase
+import com.example.team_23_kotlin.core.ui.NetworkImage
 import kotlin.math.roundToInt
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.team_23_kotlin.data.posts.FirestorePostsRepository
+import com.example.team_23_kotlin.data.posts.PostsRepository
+import com.example.team_23_kotlin.core.ui.NetworkImage
+import com.google.firebase.firestore.FirebaseFirestore
+
 
 data class ProductItem(
     val id: String,
     val title: String,
     val price: String,
-    val imageUrl: String
+    val imageUrl: String?
 )
-
-
-@Composable
-private fun RecsCarousel(
-    items: List<ProductItem>,
-    onClick: (String) -> Unit = {}
-) {
-    val config = LocalConfiguration.current
-    val screenWidth = config.screenWidthDp.dp
-    val peek = 24.dp
-    val pageWidth = screenWidth - (peek * 2)
-
-    val pagerState = rememberPagerState(pageCount = { items.size })
-
-    HorizontalPager(
-        state = pagerState,
-        pageSize = PageSize.Fixed(pageWidth),
-        pageSpacing = 12.dp,
-        contentPadding = PaddingValues(horizontal = peek)
-    ) { page ->
-        val item = items[page]
-        SampleCard(
-            id = item.id,
-            title = item.title,
-            price = item.price,
-            imageUrl = item.imageUrl,
-            onClick = onClick,
-            modifier = Modifier
-                .fillMaxWidth()
-        )
-    }
-}
-
-
-@Composable
-private fun NetworkImage(
-    url: String?,
-    modifier: Modifier = Modifier,
-    contentScale: ContentScale = ContentScale.Crop
-) {
-    val context = LocalContext.current
-    AsyncImage(
-        model = ImageRequest.Builder(context)
-            .data(url)
-            .crossfade(true)
-            .build(),
-        contentDescription = null,
-        modifier = modifier,
-        contentScale = contentScale
-    )
-}
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,9 +58,15 @@ fun HomeScreen(
     onSearch: (String) -> Unit = {},
     onItemClick: (String) -> Unit = {}
 ) {
+    val postsRepo = remember { FirestorePostsRepository(FirebaseFirestore.getInstance()) }
+    val postsVm: HomePostsViewModel = viewModel(factory = object : ViewModelProvider.Factory {
+        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return HomePostsViewModel(postsRepo) as T
+        }
+    })
+    val postsState by postsVm.state.collectAsState()
     val context = LocalContext.current
-
-    // ViewModel con ubicación (igual que lo tienes)
     val viewModel: HomeViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             val repo = LocationRepositoryImpl(context)
@@ -126,38 +78,27 @@ fun HomeScreen(
 
     val isInCampus by viewModel.isInCampus.collectAsState()
 
-    // Permisos (igual que lo tienes)
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
-        onResult = { granted ->
-            if (granted) viewModel.refreshCampusStatus()
-        }
+        onResult = { granted -> if (granted) viewModel.refreshCampusStatus() }
     )
 
     LaunchedEffect(Unit) {
         val hasPermission = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION
+            context, Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
-        if (hasPermission) {
-            viewModel.refreshCampusStatus()
-        } else {
-            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
+        if (hasPermission) viewModel.refreshCampusStatus()
+        else permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
     var query by rememberSaveable { mutableStateOf("") }
-
-    // 1) Define el comportamiento de scroll
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
-    // 2) Evita que Scaffold meta insets automáticos (nosotros los controlamos)
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         contentWindowInsets = WindowInsets(0),
         topBar = {
             CenterAlignedTopAppBar(
-                // 3) PÁSALO AQUÍ 👇
                 scrollBehavior = scrollBehavior,
                 title = {
                     Text(
@@ -165,7 +106,6 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onPrimary,
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
-                            // Quita el offset negativo para evitar saltos
                             platformStyle = PlatformTextStyle(includeFontPadding = false)
                         )
                     )
@@ -176,18 +116,12 @@ fun HomeScreen(
             )
         }
     ) { inner ->
-
-        // 4) Consumimos los insets del Scaffold para que no se dupliquen
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(inner)              // usa el padding del Scaffold tal cual
-                .consumeWindowInsets(inner), // evita doble aplicación de insets
-            contentPadding = PaddingValues(
-                top = 16.dp,
-                bottom = 16.dp,
-                start = 16.dp, end = 16.dp
-            ),
+                .padding(inner)
+                .consumeWindowInsets(inner),
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
@@ -200,13 +134,10 @@ fun HomeScreen(
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedPlaceholderColor = Color(204,204,204),
-                        unfocusedPlaceholderColor = Color(204,204,204),
                         focusedContainerColor = MaterialTheme.colorScheme.surface,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                         focusedBorderColor = MaterialTheme.colorScheme.background,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.background,
-                        unfocusedTextColor = Color(115,115,115),
+                        unfocusedBorderColor = MaterialTheme.colorScheme.background
                     )
                 )
             }
@@ -222,15 +153,16 @@ fun HomeScreen(
                 )
             }
 
-            // HorizontalPager funciona bien dentro de LazyColumn, pero evita alturas ambiguas
+            // Demo de recs (si luego conectas Firestore, solo llena la lista)
             item {
                 val recs = listOf(
-                    ProductItem("1","MathBook Baldor", "$50.000", "https://panamericana.vtexassets.com/arquivos/ids/482890/algebra-baldor-3-9786075502090.jpg?v=638125237314670000"),
-                    ProductItem("2","Harry Potter", "$100.000", "https://sm.ign.com/ign_nordic/lists/h/harry-pott/harry-potter-books-in-order-a-chronological-reading-guide_r5mm.jpg"),
-                    ProductItem("3","Calculus", "$80.000", "https://picsum.photos/seed/calc/600/600")
+                    ProductItem("p1","Calculus Book", "$50.000",
+                        "https://www.wolfram-media.com/products/img/IntroToCalc-bookhomepage.png"),
+                    ProductItem("p2","Lamp", "$30.000",
+                        "https://m.media-amazon.com/images/I/61Ckk6bdzwL.jpg"),
+                    ProductItem("p3","Headphones", "$120.000",
+                        "https://picsum.photos/seed/calc/600/600")
                 )
-                // Si vieras “jank”, envuelve en un Box con altura mínima:
-                // Box(Modifier.fillMaxWidth().heightIn(min = 0.dp)) { ... }
                 RecsCarousel(items = recs, onClick = onItemClick)
             }
 
@@ -238,43 +170,71 @@ fun HomeScreen(
                 Text("New Posts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
 
-            // tus PostCard como estaban
-            item {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    PostCard(
-                        id = "1",
-                        title = "Biology book",
-                        description = "First-Year Biology book, Looks like new!",
-                        imageUrl = "https://play-lh.googleusercontent.com/BNVoUFHLmyuDoun_E-WsG7j_ossatnT3Oa0ez1k1i7kkMjVzsy-LSJfQUTxcAfJqTDc",
-                        onClick = onItemClick,
-                        modifier = Modifier.weight(1f)
-                    )
+            when {
+                postsState.isLoading -> {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    }
                 }
-                Row {
-                    PostCard(
-                        id = "2",
-                        title = "Desk Lamp",
-                        description = "LED Desk Lamp, Looks like new!",
-                        imageUrl = "https://m.media-amazon.com/images/I/61Ckk6bdzwL.jpg",
-                        onClick = onItemClick,
-                        modifier = Modifier.weight(1f)
-                    )
+                postsState.error != null -> {
+                    item {
+                        Text(
+                            "Error: ${postsState.error}",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
-                Row {
-                    PostCard(
-                        id = "3",
-                        title = "Desk Lamp",
-                        description = "LED Desk Lamp, Looks like new!",
-                        imageUrl = "https://m.media-amazon.com/images/I/61Ckk6bdzwL.jpg",
-                        onClick = onItemClick,
-                        modifier = Modifier.weight(1f)
-                    )
+                else -> {
+                    items(postsState.items.size) { index ->
+                        val p = postsState.items[index]
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            PostCard(
+                                id = p.id,
+                                title = p.title,
+                                description = p.description,
+                                imageUrl = p.imageUrl,
+                                onClick = onItemClick,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
                 }
             }
+
         }
     }
 }
 
+@Composable
+private fun RecsCarousel(
+    items: List<ProductItem>,
+    onClick: (String) -> Unit = {}
+) {
+    val config = LocalConfiguration.current
+    val screenWidth = config.screenWidthDp.dp
+    val peek = 24.dp
+    val pageWidth = screenWidth - (peek * 2)
+    val pagerState = rememberPagerState(pageCount = { items.size })
+
+    HorizontalPager(
+        state = pagerState,
+        pageSize = PageSize.Fixed(pageWidth),
+        pageSpacing = 12.dp,
+        contentPadding = PaddingValues(horizontal = peek)
+    ) { page ->
+        val item = items[page]
+        SampleCard(
+            id = item.id,
+            title = item.title,
+            price = item.price,
+            imageUrl = item.imageUrl,
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
 
 @Composable
 private fun SampleCard(
@@ -282,8 +242,8 @@ private fun SampleCard(
     id: String,
     title: String,
     price: String,
-    imageUrl: String? = null,
-    onClick: (String) -> Unit = {},
+    imageUrl: String?,
+    onClick: (String) -> Unit = {}
 ) {
     ElevatedCard(
         onClick = { onClick(id) },
@@ -292,37 +252,29 @@ private fun SampleCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-
             NetworkImage(
                 url = imageUrl,
+                contentDescription = title,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(16.dp)),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
             )
-
-            Text(
-                title,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.ExtraBold,
-                style = MaterialTheme.typography.bodyLarge
-            )
+            Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.ExtraBold)
             Text(price, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
 
-
 @Composable
 private fun PostCard(
-    modifier: Modifier = Modifier,
     id: String,
     title: String,
     description: String,
-    imageUrl: String? = null,
-    onClick: (String) -> Unit = {},
+    imageUrl: String?,
+    modifier: Modifier,
+    onClick: (String) -> Unit = {}
 ) {
     val config = LocalConfiguration.current
     val screenWidth = config.screenWidthDp.dp
@@ -332,7 +284,6 @@ private fun PostCard(
         onClick = { onClick(id) },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = modifier
     ) {
         Row(
             modifier = Modifier
@@ -344,34 +295,20 @@ private fun PostCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Text(
-                    text = "New",
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Normal),
-                )
-                Text(
-                    title,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Normal,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Text("New", style = MaterialTheme.typography.labelSmall)
+                Text(title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold)
+                Text(description, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
             }
 
             NetworkImage(
                 url = imageUrl,
+                contentDescription = title,
                 modifier = Modifier
                     .width(imageWidth)
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(12.dp)),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
             )
         }
     }
 }
-
