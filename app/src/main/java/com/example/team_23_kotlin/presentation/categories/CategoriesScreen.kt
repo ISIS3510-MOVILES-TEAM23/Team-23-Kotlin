@@ -98,7 +98,6 @@ fun CategoriesScreen(
                     title = title,
                     iconRes = res,
                     onClick = {
-                        // 1) log + 2) callback navegación/filtrado
                         viewModel.onEvent(CategoriesEvent.CategoryClicked(title))
                         onCategoryClick(title)
                     }

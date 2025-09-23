@@ -57,6 +57,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.team_23_kotlin.presentation.auth.LoginAuthViewModel
 import com.example.team_23_kotlin.presentation.auth.SignUpAuthViewModel
 import com.example.team_23_kotlin.presentation.auth.SignUpScreen
+import com.example.team_23_kotlin.presentation.categories.CategoryFeedScreen
 import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseScreen
 import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseViewModel
 
@@ -69,6 +70,9 @@ object Routes {
     const val PROFILE = "profile"
     const val EDIT_PROFILE = "edit_profile"
     const val CATEGORIES = "categories"
+    const val CATEGORY_FEED = "category/{cid}/{title}"
+    fun categoryFeed(cid: String, title: String) = "category/${Uri.encode(cid)}/${Uri.encode(title)}"
+
     const val POST = "post"
     const val CHAT = "chat/{chatId}"
     fun chat(chatId: String) = "chat/${Uri.encode(chatId)}"
@@ -180,6 +184,8 @@ fun AppNavHost() {
                 )
             }
 
+
+
             composable(Routes.LOGIN) {
                 val vm: LoginAuthViewModel = hiltViewModel()
                 var error by remember { mutableStateOf<String?>(null) }
@@ -273,9 +279,39 @@ fun AppNavHost() {
             }
 
             composable(Routes.CATEGORIES) {
-                CategoriesScreen(onCategoryClick = {
-                })
+                CategoriesScreen(
+                    onCategoryClick = { title ->
+                        val id = when (title.lowercase()) {
+                            "books" -> "c123"
+                            "furniture" -> "f001"
+                            "bikes" -> "b001"
+                            "electronics" -> "e001"
+                            "clothes" -> "cl001"
+                            "tickets" -> "t001"
+                            else -> "c123"
+                        }
+                        nav.navigate(Routes.categoryFeed(id, title))
+                    }
+                )
             }
+
+            composable(
+                route = Routes.CATEGORY_FEED,
+                arguments = listOf(
+                    navArgument("cid") { type = NavType.StringType },
+                    navArgument("title") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val cid   = backStackEntry.arguments?.getString("cid") ?: return@composable
+                val title = backStackEntry.arguments?.getString("title") ?: "Category"
+                CategoryFeedScreen(
+                    categoryId = cid,
+                    categoryTitle = title,
+                    onBack = { nav.popBackStack() },
+                    onItemClick = { productId -> nav.navigate(Routes.product(productId)) }
+                )
+            }
+
 
             composable(
                 route = Routes.PRODUCT,
