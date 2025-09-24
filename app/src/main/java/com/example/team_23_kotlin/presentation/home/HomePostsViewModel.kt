@@ -36,7 +36,7 @@ class HomePostsViewModel(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
-                val posts = repo.getActivePosts(limit)
+                val posts = repo.getNewPosts(limit)
                 val nf = NumberFormat.getCurrencyInstance(Locale("es", "CO"))
                 val ui = posts.map {
                     HomePostUi(

@@ -57,6 +57,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.team_23_kotlin.presentation.auth.LoginAuthViewModel
 import com.example.team_23_kotlin.presentation.auth.SignUpAuthViewModel
 import com.example.team_23_kotlin.presentation.auth.SignUpScreen
+import com.example.team_23_kotlin.presentation.categories.CategoryFeedScreen
 import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseScreen
 import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseViewModel
 
@@ -69,6 +70,10 @@ object Routes {
     const val PROFILE = "profile"
     const val EDIT_PROFILE = "edit_profile"
     const val CATEGORIES = "categories"
+    const val CATEGORY_FEED = "category/{categoryId}/{categoryTitle}"
+    fun categoryFeed(categoryId: String, categoryTitle: String) =
+        "category/$categoryId/${Uri.encode(categoryTitle)}"
+
     const val POST = "post"
     const val CHAT = "chat/{chatId}"
     fun chat(chatId: String) = "chat/${Uri.encode(chatId)}"
@@ -180,6 +185,8 @@ fun AppNavHost() {
                 )
             }
 
+
+
             composable(Routes.LOGIN) {
                 val vm: LoginAuthViewModel = hiltViewModel()
                 var error by remember { mutableStateOf<String?>(null) }
@@ -273,9 +280,32 @@ fun AppNavHost() {
             }
 
             composable(Routes.CATEGORIES) {
-                CategoriesScreen(onCategoryClick = {
-                })
+                CategoriesScreen(
+                    onCategoryClick = { categoryId ->
+                        nav.navigate(Routes.categoryFeed(categoryId, "Category"))
+                    }
+                )
             }
+
+
+            composable(
+                route = Routes.CATEGORY_FEED,
+                arguments = listOf(
+                    navArgument("categoryId") { type = NavType.StringType },
+                    navArgument("categoryTitle") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val categoryId = backStackEntry.arguments?.getString("categoryId") ?: return@composable
+                val categoryTitle = backStackEntry.arguments?.getString("categoryTitle") ?: ""
+                CategoryFeedScreen(
+                    categoryId = categoryId,
+                    categoryTitle = categoryTitle,
+                    onBack = { nav.popBackStack() },
+                    onItemClick = { productId -> nav.navigate(Routes.product(productId)) }
+                )
+            }
+
+
 
             composable(
                 route = Routes.PRODUCT,

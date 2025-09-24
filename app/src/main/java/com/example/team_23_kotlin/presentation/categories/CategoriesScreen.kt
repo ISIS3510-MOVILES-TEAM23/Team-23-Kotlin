@@ -39,16 +39,33 @@ fun CategoriesScreen(
     val state by viewModel.state.collectAsState()
 
     val categories = listOf(
-        "Furniture" to R.drawable.ic_furniture,
-        "Bikes" to R.drawable.ic_bikes,
-        "Books" to R.drawable.ic_books,
-        "Electronics" to R.drawable.ic_electronics,
-        "Clothes" to R.drawable.ic_clothes,
-        "Tickets" to R.drawable.ic_electronics
+        Triple("Furniture", "c2", R.drawable.ic_furniture),
+        Triple("Bikes", "c3", R.drawable.ic_bikes),
+        Triple("Books", "c123", R.drawable.ic_books),
+        Triple("Electronics", "c4", R.drawable.ic_electronics),
+        Triple("Clothes", "c5", R.drawable.ic_clothes),
+        Triple("Tickets", "c6", R.drawable.ic_electronics)
     )
 
+
     Scaffold(
-        topBar = { /* ... igual a tu código */ }
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        "Mercandes",
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            platformStyle = PlatformTextStyle(includeFontPadding = false)
+                        )
+                    )
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            )
+        }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -93,17 +110,17 @@ fun CategoriesScreen(
                 Spacer(Modifier.height(12.dp))
             }
 
-            items(categories) { (title, res) ->
+            items(categories) { (title, id, res) ->
                 CategoryCard(
                     title = title,
                     iconRes = res,
                     onClick = {
-                        // 1) log + 2) callback navegación/filtrado
                         viewModel.onEvent(CategoriesEvent.CategoryClicked(title))
-                        onCategoryClick(title)
+                        onCategoryClick(id)
                     }
                 )
             }
+
 
             item { Spacer(Modifier.height(8.dp)) }
         }

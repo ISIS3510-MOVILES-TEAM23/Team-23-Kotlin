@@ -153,7 +153,6 @@ fun HomeScreen(
                 )
             }
 
-            // Demo de recs (si luego conectas Firestore, solo llena la lista)
             item {
                 val recs = listOf(
                     ProductItem("p1","Calculus Book", "$50.000",
