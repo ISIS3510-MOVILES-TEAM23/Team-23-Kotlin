@@ -1,5 +1,7 @@
 package com.example.team_23_kotlin.presentation.confirmpurchase
 
+import com.example.team_23_kotlin.data.bluetooth.models.BluetoothDeviceData
+
 // Estado para la confirmación de compra
 data class ConfirmPurchaseState(
     val chatId: String = "",

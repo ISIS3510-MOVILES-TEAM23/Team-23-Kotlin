@@ -4,6 +4,7 @@ import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -14,6 +15,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -45,6 +48,7 @@ fun ConfirmPurchaseScreen(
 
     // Solicitar permisos al inicio
     LaunchedEffect(Unit) {
+        Log.d("ConfirmPurchaseScreen", "Estado inicial: $state")
         val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             arrayOf(
                 Manifest.permission.BLUETOOTH_SCAN,
@@ -70,9 +74,15 @@ fun ConfirmPurchaseScreen(
 
     // Manejar compra exitosa
     LaunchedEffect(state.purchaseConfirmed) {
+        Log.d("ConfirmPurchaseScreen", "LaunchedEffect triggered - purchaseConfirmed = ${state.purchaseConfirmed}")
         if (state.purchaseConfirmed) {
+
             kotlinx.coroutines.delay(2000) // Mostrar confirmación por 2 segundos
+            viewModel.resetState()
+            Log.d("ConfirmPurchaseScreen", "ESTADO: ${state}")
             onPurchaseSuccess()
+
+
         }
     }
 
@@ -85,7 +95,7 @@ fun ConfirmPurchaseScreen(
     ) {
         Text(
             text = "Confirm Purchase",
-            style = MaterialTheme.typography.headlineSmall
+            style = MaterialTheme.typography.titleMedium
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -178,10 +188,15 @@ fun ConfirmPurchaseScreen(
         TextButton(
             onClick = {
                 viewModel.onEvent(ConfirmPurchaseEvent.Cancel)
+                viewModel.resetState()
                 onCancel()
             }
         ) {
-            Text("Cancel")
+            Text(
+                text = "Cancel",
+                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }
@@ -224,18 +239,18 @@ private fun IdleContent(
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = "Listo para conectar",
+            text = "Ready to Connect",
             fontSize = 18.sp
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Acerca los teléfonos con Bluetooth activado para confirmar la compra",
+            text = "Bring your phones with Bluetooth on closer together to confirm the purchase",
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(horizontal = 32.dp)
         )
         Spacer(modifier = Modifier.height(24.dp))
         Button(onClick = onStartConnection) {
-            Text("Buscar dispositivos")
+            Text("Buscar dispositivos", fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -393,3 +408,4 @@ private fun ErrorContent(
         }
     }
 }
+

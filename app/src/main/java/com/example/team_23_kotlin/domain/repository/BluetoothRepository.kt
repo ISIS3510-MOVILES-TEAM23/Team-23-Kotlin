@@ -18,7 +18,6 @@ interface BluetoothRepository {
     suspend fun connectToDevice(device: BluetoothDeviceData): Result<ConnectionResult>
     suspend fun startListening(): Result<Unit>
     suspend fun sendPurchaseConfirmation(chatId: String): Result<MessageResult>
-
     suspend fun sendPurchaseAccepted(): Result<MessageResult>
     suspend fun disconnect(): Result<Unit>
     fun cleanup()

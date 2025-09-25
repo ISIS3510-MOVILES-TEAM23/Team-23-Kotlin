@@ -122,7 +122,7 @@ private fun PurchaseConfirmationBar(
 ) {
     Surface(
         tonalElevation = 8.dp,
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -137,22 +137,24 @@ private fun PurchaseConfirmationBar(
                     Text(
                         text = "¿Listo para comprar?",
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = listingTitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                        color = MaterialTheme.colorScheme.onPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
+                Spacer(Modifier.width(20.dp))
+
                 Button(
                     onClick = onConfirmPurchase,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
+                        containerColor = MaterialTheme.colorScheme.secondary
                     ),
                     shape = RoundedCornerShape(20.dp)
                 ) {
@@ -163,8 +165,9 @@ private fun PurchaseConfirmationBar(
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = "Confirmar Compra",
-                        style = MaterialTheme.typography.labelMedium
+                        text = "Confirma",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
