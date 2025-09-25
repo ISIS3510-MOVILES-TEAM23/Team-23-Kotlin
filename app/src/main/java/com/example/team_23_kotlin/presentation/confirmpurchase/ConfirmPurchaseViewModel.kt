@@ -1,6 +1,7 @@
 // presentation/confirmpurchase/ConfirmPurchaseViewModel.kt
 package com.example.team_23_kotlin.presentation.confirmpurchase
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.team_23_kotlin.domain.repository.BluetoothRepository
@@ -10,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 @HiltViewModel
@@ -205,6 +207,7 @@ class ConfirmPurchaseViewModel @Inject constructor(
 
     private fun connectToDevice(device: BluetoothDeviceInfo) {
         viewModelScope.launch {
+            stopDeviceScanning()
             val deviceData = com.example.team_23_kotlin.data.bluetooth.models.BluetoothDeviceData(
                 name = device.name,
                 address = device.address
@@ -279,10 +282,31 @@ class ConfirmPurchaseViewModel @Inject constructor(
         }
     }
 
+    fun resetPurchaseConfirmed() {
+        Log.d("ConfirmPurchaseVM", "Resetting purchaseConfirmed to false")
+        _state.update { it.copy(purchaseConfirmed = false) }
+    }
 
     override fun onCleared() {
         super.onCleared()
         bluetoothRepository.cleanup()
+    }
+
+    fun resetState() {
+        _state.update {
+            it.copy(
+                isBluetoothEnabled = false,
+                isConnecting = false,
+                isConnected = false,
+                confirmationSent = false,
+                purchaseConfirmed = false,
+                error = null,
+                nearbyDevices = emptyList(),
+                selectedDevice = null,
+                connectionStatus = ConnectionStatus.IDLE,
+                permissionsGranted = false
+            )
+        }
     }
 
     // Función helper para convertir BluetoothState a ConnectionStatus

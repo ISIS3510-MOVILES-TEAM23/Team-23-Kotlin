@@ -5,7 +5,10 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothServerSocket
 import android.bluetooth.BluetoothSocket
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.util.Log
 import androidx.core.app.ActivityCompat
@@ -44,8 +47,8 @@ class BluetoothRepositoryImpl @Inject constructor(
     private val _connectionState = MutableStateFlow(ConnectionResult.default())
     override val connectionState: StateFlow<ConnectionResult> = _connectionState
 
-    private val _incomingMessages = MutableStateFlow(MessageResult.default())
-    override val incomingMessages: StateFlow<MessageResult> = _incomingMessages
+    private val _incomingMessages = MutableSharedFlow<MessageResult>(0)
+    override val incomingMessages: SharedFlow<MessageResult> = _incomingMessages
 
     private val uuid: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB") // SPP UUID
 
@@ -65,24 +68,79 @@ class BluetoothRepositoryImpl @Inject constructor(
         return true
     }
 
+    private val discoveryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                BluetoothDevice.ACTION_FOUND -> {
+                    val device: BluetoothDevice? =
+                        intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                    device?.let {
+                        @SuppressLint("MissingPermission")
+                        val newDevice = BluetoothDeviceData(
+                            name = it.name ?: "Dispositivo desconocido",
+                            address = it.address
+                        )
+
+                        // Evitar duplicados
+                        val currentList = _discoveredDevices.value.toMutableList()
+                        if (currentList.none { d -> d.address == newDevice.address }) {
+                            currentList.add(newDevice)
+                            _discoveredDevices.value = currentList
+                            Log.d(TAG, "Dispositivo encontrado: ${newDevice.name} - ${newDevice.address}")
+                        }
+                    }
+                }
+
+                BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
+                    Log.d(TAG, "Escaneo de dispositivos finalizado")
+                }
+            }
+        }
+    }
+
     override suspend fun startDeviceDiscovery(): Result<Unit> {
         return try {
-            val permissionGranted = ActivityCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.BLUETOOTH_SCAN
-            ) == PackageManager.PERMISSION_GRANTED
-
-            if (!permissionGranted) {
-                return Result.failure(SecurityException("No se tienen permisos de BLUETOOTH_SCAN"))
+            val permissionGranted = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                ActivityCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.BLUETOOTH_SCAN
+                ) == PackageManager.PERMISSION_GRANTED
+            } else {
+                ActivityCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED &&
+                        ActivityCompat.checkSelfPermission(
+                            context,
+                            android.Manifest.permission.BLUETOOTH
+                        ) == PackageManager.PERMISSION_GRANTED
             }
 
+            if (!permissionGranted) {
+                return Result.failure(SecurityException("No se tienen permisos necesarios de Bluetooth"))
+            }
+
+            // Limpiar lista previa
+            _discoveredDevices.value = emptyList()
+
+            // Registrar receiver
+            val filter = IntentFilter().apply {
+                addAction(BluetoothDevice.ACTION_FOUND)
+                addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
+            }
+            context.registerReceiver(discoveryReceiver, filter)
+
+            // Iniciar discovery
             bluetoothAdapter?.startDiscovery()
+
+            // Emitir también los emparejados
             discoveryJob = CoroutineScope(Dispatchers.IO).launch {
                 val bondedDevices = bluetoothAdapter?.bondedDevices?.map {
                     BluetoothDeviceData(name = it.name, address = it.address)
                 } ?: emptyList()
                 _discoveredDevices.emit(bondedDevices)
             }
+
             Result.success(Unit)
         } catch (e: SecurityException) {
             Result.failure(SecurityException("Permisos de Bluetooth rechazados: ${e.message}"))
@@ -91,18 +149,32 @@ class BluetoothRepositoryImpl @Inject constructor(
         }
     }
 
-
     override suspend fun stopDeviceDiscovery(): Result<Unit> {
         return try {
-            val permissionGranted = ActivityCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.BLUETOOTH_SCAN
-            ) == PackageManager.PERMISSION_GRANTED
+            val permissionGranted = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                ActivityCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.BLUETOOTH_SCAN
+                ) == PackageManager.PERMISSION_GRANTED
+            } else {
+                ActivityCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED &&
+                        ActivityCompat.checkSelfPermission(
+                            context,
+                            android.Manifest.permission.BLUETOOTH
+                        ) == PackageManager.PERMISSION_GRANTED
+            }
 
             if (permissionGranted) {
                 bluetoothAdapter?.cancelDiscovery()
-            } else {
-                return Result.failure(SecurityException("Permiso BLUETOOTH_SCAN no concedido"))
+            }
+
+            try {
+                context.unregisterReceiver(discoveryReceiver)
+            } catch (e: IllegalArgumentException) {
+                Log.w(TAG, "Receiver ya estaba desregistrado")
             }
 
             discoveryJob?.cancel()
@@ -117,14 +189,30 @@ class BluetoothRepositoryImpl @Inject constructor(
 
 
 
+
+
     override suspend fun connectToDevice(device: BluetoothDeviceData): Result<ConnectionResult> {
         Log.d(TAG, "Intentando conectar con ${device.name} (${device.address})")
         return try {
             // Verificar permiso necesario (según API)
-            val permissionGranted = ActivityCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.BLUETOOTH_CONNECT
-            ) == PackageManager.PERMISSION_GRANTED
+            val permissionGranted = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                // Android 12+ requiere BLUETOOTH_CONNECT
+                ActivityCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.BLUETOOTH_CONNECT
+                ) == PackageManager.PERMISSION_GRANTED
+            } else {
+                // Android 11 e inferiores requieren BLUETOOTH (normal) + ACCESS_FINE_LOCATION
+                ActivityCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.BLUETOOTH
+                ) == PackageManager.PERMISSION_GRANTED &&
+                        ActivityCompat.checkSelfPermission(
+                            context,
+                            android.Manifest.permission.ACCESS_FINE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED
+            }
+
 
             if (!permissionGranted) {
                 return Result.failure(SecurityException("Permiso BLUETOOTH_CONNECT no concedido"))
@@ -160,10 +248,24 @@ class BluetoothRepositoryImpl @Inject constructor(
     override suspend fun startListening(): Result<Unit> {
         Log.d(TAG, "Iniciando servidor Bluetooth...")
         return try {
-            val permissionGranted = ActivityCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.BLUETOOTH_CONNECT
-            ) == PackageManager.PERMISSION_GRANTED
+            val permissionGranted = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                // Android 12+ requiere BLUETOOTH_CONNECT
+                ActivityCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.BLUETOOTH_CONNECT
+                ) == PackageManager.PERMISSION_GRANTED
+            } else {
+                // Android 11 e inferiores requieren BLUETOOTH (normal) + ACCESS_FINE_LOCATION
+                ActivityCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.BLUETOOTH
+                ) == PackageManager.PERMISSION_GRANTED &&
+                        ActivityCompat.checkSelfPermission(
+                            context,
+                            android.Manifest.permission.ACCESS_FINE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED
+            }
+
 
             if (!permissionGranted) {
                 return Result.failure(SecurityException("Permiso BLUETOOTH_CONNECT no concedido"))
@@ -191,7 +293,7 @@ class BluetoothRepositoryImpl @Inject constructor(
                     }
                 } catch (e: IOException) {
                     Log.e(TAG, "Error al aceptar conexión: ${e.message}")
-                    _connectionState.emit(ConnectionResult.failure("Error al aceptar conexión"))
+                    //_connectionState.emit(ConnectionResult.failure("Error al aceptar conexión"))
                 } catch (e: SecurityException) {
                     _connectionState.emit(ConnectionResult.failure("Permiso denegado al aceptar conexión"))
                 }
@@ -225,7 +327,7 @@ class BluetoothRepositoryImpl @Inject constructor(
                 }
             } catch (e: IOException) {
                 Log.e(TAG, "Error al leer mensaje: ${e.message}")
-                _incomingMessages.emit(MessageResult.failure("Error al leer mensaje"))
+                //_incomingMessages.emit(MessageResult.failure("Error al leer mensaje"))
             }
         }
     }
