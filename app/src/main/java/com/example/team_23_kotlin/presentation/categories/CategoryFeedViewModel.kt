@@ -29,11 +29,11 @@ class CategoryFeedViewModel(
         _state.value = _state.value.copy(isLoading = true, error = null)
 
         val flow = callbackFlow<List<PostEntity>> {
-            val categoryRef = db.document("/category/$categoryId")
+            val categoryRef = db.document("/categories/$categoryId")
 
             val query = db.collection("posts")
                 .whereEqualTo("status", "active")
-                .whereEqualTo("category", categoryRef)
+                .whereEqualTo("category_id", categoryRef)
 
             val reg = query.addSnapshotListener { snap, e ->
                 if (e != null) {
