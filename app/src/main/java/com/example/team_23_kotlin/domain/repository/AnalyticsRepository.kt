@@ -7,4 +7,10 @@ interface AnalyticsRepository {
         source: String,              // "search_bar" | "category_chip"
         suggested: List<String>? = null
     )
+
+    fun logProductClick(
+        postId: String,
+        category: String,
+        source: String
+    )
 }

@@ -3,6 +3,7 @@ package com.example.team_23_kotlin.data.posts
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import kotlinx.coroutines.tasks.await
 import java.util.Date
@@ -73,6 +74,10 @@ class FirestorePostsRepository(
         val snap = db.collection("posts").document(id).get().await()
         if (!snap.exists()) error("Post not found")
         val data = snap.data ?: emptyMap<String, Any?>()
+
+        val categoryRef = data["category_id"] as? DocumentReference
+        val categoryName = categoryRef?.get()?.await()?.getString("name") ?: "Unknown"
+
         return PostEntity(
             id = snap.id,
             title = data["title"] as? String ?: "",
@@ -85,7 +90,8 @@ class FirestorePostsRepository(
             },
             images = (data["images"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
             userRef = data["user_ref"] as? String ?: "",
-            status = data["status"] as? String ?: ""
+            status = data["status"] as? String ?: "",
+            categoryName = categoryName
         )
     }
 }
