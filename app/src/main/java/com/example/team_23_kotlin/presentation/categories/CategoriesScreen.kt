@@ -44,7 +44,8 @@ fun CategoriesScreen(
         Triple("Books", "c1", R.drawable.ic_books),
         Triple("Electronics", "c4", R.drawable.ic_electronics),
         Triple("Clothes", "c5", R.drawable.ic_clothes),
-        Triple("Tickets", "c6", R.drawable.ic_electronics)
+        Triple("Tickets", "c6", R.drawable.ic_electronics),
+        Triple("University Club", "c7", R.drawable.ic_uni)
     )
 
 

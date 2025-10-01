@@ -18,5 +18,6 @@ data class PostEntity(
     val images: List<String>,
     val userRef: String,
     val status: String,
-    val createdAt: Date? = null
+    val createdAt: Date? = null,
+    val categoryName: String = "Unknown"
 )

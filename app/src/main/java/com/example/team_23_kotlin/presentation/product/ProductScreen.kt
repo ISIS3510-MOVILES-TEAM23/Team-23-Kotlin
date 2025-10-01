@@ -16,12 +16,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.team_23_kotlin.core.ui.NetworkImage
 import com.example.team_23_kotlin.data.posts.FirestorePostsRepository
 import com.example.team_23_kotlin.data.posts.PostsRepository
+import com.example.team_23_kotlin.data.repository.AnalyticsRepositoryImpl
+import com.example.team_23_kotlin.domain.repository.AnalyticsRepository
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,28 +34,35 @@ import com.google.firebase.firestore.FirebaseFirestore
 fun ProductScreen(
     productId: String,
     onBack: () -> Unit,
-    nav: NavController,
-    // ⬇️ AHORA el factory recibe UN REPO, no un String
-    vmFactory: (PostsRepository) -> ProductViewModel = { repo -> ProductViewModel(repo) }
+    nav: NavController
 ) {
-    // 1) Crea el repo una sola vez
-    val repo = remember { FirestorePostsRepository(FirebaseFirestore.getInstance()) }
+    // 1. Crear repositorios una sola vez (y con tipo explícito)
+    val repo: PostsRepository = remember {
+        FirestorePostsRepository(FirebaseFirestore.getInstance())
+    }
+    val analytics: AnalyticsRepository = remember {
+        AnalyticsRepositoryImpl(
+            FirebaseAuth.getInstance(),
+            FirebaseFirestore.getInstance()
+        )
+    }
 
-    // 2) Crea el VM con ese repo
-    val viewModel: ProductViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+    // 2. Crear el ViewModel manualmente con ambos repos
+    val viewModel: ProductViewModel = viewModel(factory = object : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
-            return vmFactory(repo) as T
+            return ProductViewModel(repo, analytics) as T
         }
     })
 
-    // 3) Dispara la carga cuando cambia el id
+    // 3. Disparar carga del producto
     LaunchedEffect(productId) {
         viewModel.onEvent(ProductEvent.LoadProduct(productId))
     }
 
     val state by viewModel.state.collectAsState()
 
+    // UI (igual que la que tú ya tienes)
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
