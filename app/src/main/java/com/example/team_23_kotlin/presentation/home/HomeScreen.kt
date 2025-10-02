@@ -39,6 +39,8 @@ import com.example.team_23_kotlin.domain.usecase.CheckInCampusUseCase
 import com.example.team_23_kotlin.core.ui.NetworkImage
 import com.example.team_23_kotlin.data.posts.FirestorePostsRepository
 import com.example.team_23_kotlin.data.posts.PostEntity
+import com.example.team_23_kotlin.data.search.FirestoreSearchEventsRepository
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
@@ -171,6 +173,7 @@ fun HomeScreen(
                 }
             }
 
+            // 🔹 Recomendaciones personalizadas
             item {
                 Text(
                     "Highlighted Products for you!",
@@ -182,16 +185,46 @@ fun HomeScreen(
                 )
             }
 
+            val currentUser = FirebaseAuth.getInstance().currentUser
+            android.util.Log.d("AUTH", "UID = ${currentUser?.uid}, Email = ${currentUser?.email}")
+
+
+
             item {
-                val recs = listOf(
-                    ProductItem("p1","Calculus Book", "$50.000",
-                        "https://www.wolfram-media.com/products/img/IntroToCalc-bookhomepage.png"),
-                    ProductItem("p2","Lamp", "$30.000",
-                        "https://m.media-amazon.com/images/I/61Ckk6bdzwL.jpg"),
-                    ProductItem("p3","Headphones", "$120.000",
-                        "https://picsum.photos/seed/calc/600/600")
-                )
-                RecsCarousel(items = recs, onClick = onItemClick)
+                val recsVm: RecommendationsViewModel = viewModel(factory = object : ViewModelProvider.Factory {
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        val postsRepo = FirestorePostsRepository(FirebaseFirestore.getInstance())
+                        val searchRepo = FirestoreSearchEventsRepository(FirebaseFirestore.getInstance())
+
+                        val userId = FirebaseAuth.getInstance().currentUser?.uid
+                            ?: throw IllegalStateException("No user logged in")
+
+                        @Suppress("UNCHECKED_CAST")
+                        return RecommendationsViewModel(
+                            postsRepo,
+                            searchRepo,
+                            userId
+                        ) as T
+                    }
+                })
+                val recs by recsVm.recs.collectAsState()
+
+                if (recs.isNotEmpty()) {
+                    RecsCarousel(items = recs.map {
+                        ProductItem(
+                            id = it.id,
+                            title = it.title,
+                            price = "$${it.price}",
+                            imageUrl = it.images.firstOrNull()
+                        )
+                    })
+                } else {
+                    Text(
+                        "No personalized recommendations yet.",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
 
             item {
