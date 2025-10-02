@@ -27,12 +27,10 @@ import com.example.team_23_kotlin.ui.theme.Montserrat
 
 @Composable
 fun LoginScreen(
-    // ⬇️ CAMBIOS: en vez de onLoginSuccess vacío, pasamos correo/clave y un setter de loading
     onLogin: (email: String, password: String, setLoading: (Boolean) -> Unit) -> Unit,
     onGoToSignUp: () -> Unit,
-    errorMessage: String? = null                         // ⬅️ opcional: para mostrar errores
+    errorMessage: String? = null
 ) {
-    // 🚫 Quita rememberNavController() aquí
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -154,7 +152,6 @@ fun LoginScreen(
                 shape = RoundedCornerShape(10.dp)
             )
 
-            // ⬇️ Mostrar error (opcional)
             if (!errorMessage.isNullOrBlank()) {
                 Spacer(Modifier.height(10.dp))
                 Text(
@@ -197,33 +194,10 @@ fun LoginScreen(
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
-
-            // ------- Or -------
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Divider(modifier = Modifier.weight(1f))
-                Text(
-                    "  Or  ",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontSize = 30.sp,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Divider(modifier = Modifier.weight(1f))
-            }
 
             Spacer(Modifier.height(18.dp))
 
-            Image(
-                painter = painterResource(id = R.drawable.android_neutral_rd_si),
-                contentDescription = "Continue with Google",
-                modifier = Modifier
-                    .height(55.dp)
-                    .fillMaxWidth()
-                    .align(Alignment.CenterHorizontally)
-            )
+
         }
 
         Row(

@@ -44,11 +44,11 @@ fun SignUpScreen(
     onSubmit: (SignUpForm) -> Unit,
     onGoToLogin: () -> Unit
 ) {
-    var name by remember { mutableStateOf("Alice Example") }
-    var email by remember { mutableStateOf("student@uniandes.edu.co") }
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
-    var isVerified by remember { mutableStateOf(false) } // solo UI; la verificación real es en backend
+    var isVerified by remember { mutableStateOf(false) }
     var role by remember { mutableStateOf("student") }
     var contactPref by remember { mutableStateOf("push") }
     var isLoading by remember { mutableStateOf(false) }
