@@ -7,7 +7,7 @@ interface PostsRepository {
     suspend fun getPostById(id: String): PostEntity
 
     suspend fun getNewPosts(limit: Int = 10): List<PostEntity>
-
+    suspend fun searchPosts(query: String, limit: Int = 20): List<PostEntity>
 }
 
 data class PostEntity(

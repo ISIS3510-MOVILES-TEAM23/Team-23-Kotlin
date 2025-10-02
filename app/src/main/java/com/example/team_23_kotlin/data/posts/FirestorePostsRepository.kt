@@ -94,4 +94,25 @@ class FirestorePostsRepository(
             categoryName = categoryName
         )
     }
+
+    override suspend fun searchPosts(query: String, limit: Int): List<PostEntity> {
+        if (query.isBlank()) return emptyList()
+
+        val qs = db.collection("posts")
+            .whereEqualTo("status", "active")
+            .get()
+            .await()
+
+        val lowerQuery = query.lowercase()
+
+        return qs.documents
+            .map { snap -> mapToEntity(snap) }
+            .filter { post ->
+                post.title.lowercase().contains(lowerQuery) ||
+                        post.description.lowercase().contains(lowerQuery)
+            }
+            .take(limit)
+    }
+
+
 }
