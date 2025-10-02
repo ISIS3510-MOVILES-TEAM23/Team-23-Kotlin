@@ -114,5 +114,33 @@ class FirestorePostsRepository(
             .take(limit)
     }
 
+    fun getPostsByCategories(
+        categories: List<String>,
+        onResult: (List<PostEntity>) -> Unit
+    ) {
+        if (categories.isEmpty()) {
+            onResult(emptyList())
+            return
+        }
+
+        val normalized = categories.map { it.lowercase() }
+
+        db.collection("posts")
+            .whereIn("category_name", normalized.take(10)) // usar category_name
+            .get()
+            .addOnSuccessListener { result ->
+                val posts = result.mapNotNull { it.toObject(PostEntity::class.java) }
+                android.util.Log.d("RECS", "Posts encontrados: ${posts.size}")
+                onResult(posts)
+            }
+            .addOnFailureListener {
+                android.util.Log.e("RECS", "Error buscando posts", it)
+                onResult(emptyList())
+            }
+    }
+
+
+
+
 
 }
