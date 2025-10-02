@@ -3,6 +3,7 @@ package com.example.team_23_kotlin.presentation.categories
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,9 +23,13 @@ import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.team_23_kotlin.R
+import com.example.team_23_kotlin.core.ui.NetworkImage
+import com.example.team_23_kotlin.data.posts.FirestorePostsRepository
+import com.example.team_23_kotlin.data.posts.PostEntity
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +53,10 @@ fun CategoriesScreen(
         Triple("University Club", "c7", R.drawable.ic_uni)
     )
 
+    // 🔍 búsqueda rápida en Firestore
+    val repo = remember { FirestorePostsRepository(FirebaseFirestore.getInstance()) }
+    var searchResults by remember { mutableStateOf<List<PostEntity>>(emptyList()) }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -56,14 +65,14 @@ fun CategoriesScreen(
                     Text(
                         "Mercandes",
                         color = MaterialTheme.colorScheme.onPrimary,
-                        style = MaterialTheme.typography.titleLarge.copy(
+                        style = ty.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
                             platformStyle = PlatformTextStyle(includeFontPadding = false)
                         )
                     )
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = cs.primary
                 )
             )
         }
@@ -80,7 +89,12 @@ fun CategoriesScreen(
 
                 TextField(
                     value = state.query,
-                    onValueChange = { viewModel.onEvent(CategoriesEvent.QueryChanged(it)) },
+                    onValueChange = {
+                        viewModel.onEvent(CategoriesEvent.QueryChanged(it))
+                        scope.launch {
+                            searchResults = repo.searchPosts(it, limit = 5)
+                        }
+                    },
                     placeholder = { Text("Search products", color = hint, style = ty.bodyMedium) },
                     leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = hint) },
                     singleLine = true,
@@ -107,6 +121,35 @@ fun CategoriesScreen(
                 )
 
                 Spacer(Modifier.height(20.dp))
+            }
+
+            // 🔎 resultados de búsqueda rápida
+            if (state.query.isNotBlank() && searchResults.isNotEmpty()) {
+                items(searchResults) { post ->
+                    ListItem(
+                        headlineContent = { Text(post.title) },
+                        supportingContent = { Text("$${post.price}") },
+                        leadingContent = {
+                            if (post.images.isNotEmpty()) {
+                                NetworkImage(
+                                    url = post.images.first(),
+                                    contentDescription = post.title,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
+                        },
+                        modifier = Modifier.clickable {
+                            // log ya se hace en SubmitSearch, aquí puedes navegar
+                            onCategoryClick(post.id)
+                        }
+                    )
+                    HorizontalDivider()
+                }
+                item { Spacer(Modifier.height(20.dp)) }
+            }
+
+            // 📂 lista de categorías
+            item {
                 Text("Categories", color = cs.onBackground, style = ty.titleLarge.copy(fontWeight = FontWeight.ExtraBold))
                 Spacer(Modifier.height(12.dp))
             }
@@ -122,12 +165,10 @@ fun CategoriesScreen(
                 )
             }
 
-
             item { Spacer(Modifier.height(8.dp)) }
         }
     }
 }
-
 
 @Composable
 private fun CategoryCard(
@@ -183,10 +224,4 @@ private fun CategoryCard(
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun CategoriesScreenPreview() {
-    MaterialTheme { CategoriesScreen() }
 }
