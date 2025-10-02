@@ -34,7 +34,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoriesScreen(
-    onCategoryClick: (String) -> Unit = {},
+    onCategoryClick: (String, String) -> Unit = { _, _ -> },
+    onProductClick: (String) -> Unit = {},
     viewModel: CategoriesViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
     val cs = MaterialTheme.colorScheme
@@ -139,8 +140,17 @@ fun CategoriesScreen(
                             }
                         },
                         modifier = Modifier.clickable {
-                            // log ya se hace en SubmitSearch, aquí puedes navegar
-                            onCategoryClick(post.id)
+                            // ✅ Guardar evento en Firestore
+                            val db = FirebaseFirestore.getInstance()
+                            val clickData = hashMapOf(
+                                "postId" to post.id,
+                                "timestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                                "source" to "categories_screen"
+                            )
+                            db.collection("product_clicks").add(clickData)
+
+                            // ✅ Navegar al detalle de producto
+                            onProductClick(post.id)
                         }
                     )
                     HorizontalDivider()
@@ -160,7 +170,7 @@ fun CategoriesScreen(
                     iconRes = res,
                     onClick = {
                         viewModel.onEvent(CategoriesEvent.CategoryClicked(title))
-                        onCategoryClick(id)
+                        onCategoryClick(id, title)
                     }
                 )
             }

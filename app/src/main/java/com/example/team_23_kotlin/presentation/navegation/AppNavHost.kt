@@ -281,8 +281,11 @@ fun AppNavHost() {
 
             composable(Routes.CATEGORIES) {
                 CategoriesScreen(
-                    onCategoryClick = { categoryId ->
-                        nav.navigate(Routes.categoryFeed(categoryId, "Category"))
+                    onCategoryClick = { categoryId, categoryTitle ->
+                        nav.navigate(Routes.categoryFeed(categoryId, categoryTitle))
+                    },
+                    onProductClick = { productId ->
+                        nav.navigate(Routes.product(productId))
                     }
                 )
             }
