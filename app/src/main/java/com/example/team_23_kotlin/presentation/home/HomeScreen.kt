@@ -5,6 +5,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
@@ -36,13 +37,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.team_23_kotlin.data.repository.LocationRepositoryImpl
 import com.example.team_23_kotlin.domain.usecase.CheckInCampusUseCase
 import com.example.team_23_kotlin.core.ui.NetworkImage
-import kotlin.math.roundToInt
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.team_23_kotlin.data.posts.FirestorePostsRepository
-import com.example.team_23_kotlin.data.posts.PostsRepository
-import com.example.team_23_kotlin.core.ui.NetworkImage
+import com.example.team_23_kotlin.data.posts.PostEntity
 import com.google.firebase.firestore.FirebaseFirestore
-
+import kotlinx.coroutines.launch
 
 data class ProductItem(
     val id: String,
@@ -92,6 +90,9 @@ fun HomeScreen(
     }
 
     var query by rememberSaveable { mutableStateOf("") }
+    var searchResults by remember { mutableStateOf<List<PostEntity>>(emptyList()) }
+    val scope = rememberCoroutineScope()
+
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(
@@ -127,7 +128,13 @@ fun HomeScreen(
             item {
                 OutlinedTextField(
                     value = query,
-                    onValueChange = { query = it; onSearch(it) },
+                    onValueChange = {
+                        query = it
+                        scope.launch {
+                            searchResults = postsRepo.searchPosts(it, limit = 5)
+                        }
+                        onSearch(it)
+                    },
                     leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
                     placeholder = { Text("Search products") },
                     singleLine = true,
@@ -140,6 +147,28 @@ fun HomeScreen(
                         unfocusedBorderColor = MaterialTheme.colorScheme.background
                     )
                 )
+            }
+
+            // 🔎 Resultados de búsqueda
+            if (query.isNotBlank() && searchResults.isNotEmpty()) {
+                items(searchResults.size) { index ->
+                    val post = searchResults[index]
+                    ListItem(
+                        headlineContent = { Text(post.title) },
+                        supportingContent = { Text("$${post.price}") },
+                        leadingContent = {
+                            if (post.images.isNotEmpty()) {
+                                NetworkImage(
+                                    url = post.images.first(),
+                                    contentDescription = post.title,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
+                        },
+                        modifier = Modifier.clickable { onItemClick(post.id) }
+                    )
+                    Divider()
+                }
             }
 
             item {
@@ -193,7 +222,7 @@ fun HomeScreen(
                                 id = p.id,
                                 title = p.title,
                                 description = p.description,
-                                imageUrl = p.imageUrl,
+                                imageUrl = "",
                                 onClick = onItemClick,
                                 modifier = Modifier.weight(1f)
                             )
@@ -201,7 +230,6 @@ fun HomeScreen(
                     }
                 }
             }
-
         }
     }
 }
