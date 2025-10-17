@@ -126,10 +126,13 @@ class FirestorePostsRepository(
         val normalized = categories.map { it.lowercase() }
 
         db.collection("posts")
-            .whereIn("category_name", normalized.take(10)) // usar category_name
+            .whereIn("category_name", normalized.take(10))
             .get()
             .addOnSuccessListener { result ->
-                val posts = result.mapNotNull { it.toObject(PostEntity::class.java) }
+                val posts = result.documents.mapNotNull { doc ->
+                    doc.toObject(PostEntity::class.java)?.copy(id = doc.id)
+                }
+
                 android.util.Log.d("RECS", "Posts encontrados: ${posts.size}")
                 onResult(posts)
             }
@@ -138,6 +141,8 @@ class FirestorePostsRepository(
                 onResult(emptyList())
             }
     }
+
+
 
 
 
