@@ -271,7 +271,10 @@ fun AppNavHost() {
             composable(Routes.PROFILE) {
                 ProfileScreen(
                     locationViewModel= locationViewModel,
-                    onGoToEdit = { nav.navigate(Routes.EDIT_PROFILE) }
+                    onGoToEdit = { nav.navigate(Routes.EDIT_PROFILE) },
+                    onProductClick = { productId ->
+                        nav.navigate("product/$productId")
+                    }
                 )
             }
 
@@ -347,9 +350,10 @@ fun AppNavHost() {
                     chatId = chatId,
                     onCancel = { nav.popBackStack() },
                     onPurchaseSuccess = {
-                        // Navegar al chat de nuevo o a home
-                        nav.navigate(Routes.chat(chatId)) {
-                            popUpTo(Routes.CONFIRMPURCHASE) { inclusive = true }
+                        // ✅ Ir directo al Home y limpiar el backstack
+                        nav.navigate(Routes.HOME) {
+                            popUpTo(Routes.HOME) { inclusive = true }
+                            launchSingleTop = true
                         }
                     },
                     viewModel = hiltViewModel<ConfirmPurchaseViewModel>()

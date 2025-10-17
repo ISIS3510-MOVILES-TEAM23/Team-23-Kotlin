@@ -1,47 +1,196 @@
-// presentation/chat/ChatViewModel.kt
 package com.example.team_23_kotlin.presentation.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
 
+@HiltViewModel
+class ChatViewModel @Inject constructor(
+    private val firestore: FirebaseFirestore,
+    private val auth: FirebaseAuth
+) : ViewModel() {
 
-
-// ViewModel
-class ChatViewModel(private val chatId: String) : ViewModel() {
-
-    private val _state = MutableStateFlow(
-        ChatState(
-            header = ChatHeader(
-                chatId = chatId,
-                peerName = "",
-                peerAvatarUrl = null,
-                listingTitle = null
-            )
-        )
-    )
+    private val _state = MutableStateFlow(ChatState())
     val state: StateFlow<ChatState> = _state.asStateFlow()
 
-    init {
-        loadInitialData()
+    // =====================================================
+    // 🔹 Cargar un chat específico
+    // =====================================================
+    fun loadChat(chatId: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+
+            try {
+                val chatDoc = firestore.collection("chats").document(chatId).get().await()
+                if (!chatDoc.exists()) {
+                    _state.value = _state.value.copy(error = "Chat not found", isLoading = false)
+                    return@launch
+                }
+
+                val data = chatDoc.data ?: emptyMap()
+                val productId = data["product_id"] as? String
+                val buyerId = data["buyer_id"] as? String
+                val sellerId = data["seller_id"] as? String
+                val currentUid = auth.currentUser?.uid ?: ""
+
+                // Determinar el peer (la otra persona)
+                val peerId = if (buyerId == currentUid) sellerId else buyerId
+                val peerDoc = peerId?.let { firestore.collection("users").document(it).get().await() }
+                val peerName = peerDoc?.getString("name") ?: "User"
+                val peerAvatarUrl = peerDoc?.getString("photoUrl")
+
+                // Cargar título del producto
+                val productDoc = productId?.let { firestore.collection("posts").document(it).get().await() }
+                val productTitle = productDoc?.getString("title") ?: "Product"
+
+                // Actualizar header
+                _state.value = _state.value.copy(
+                    header = ChatHeader(
+                        chatId = chatId,
+                        peerName = peerName,
+                        peerAvatarUrl = peerAvatarUrl,
+                        listingTitle = productTitle
+                    ),
+                    isLoading = false
+                )
+
+                // Escuchar mensajes en tiempo real
+                listenToMessages(chatId)
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _state.value = _state.value.copy(error = e.message, isLoading = false)
+            }
+        }
     }
 
+    // =====================================================
+    // 🔹 Escuchar mensajes en tiempo real
+    // =====================================================
+    private fun listenToMessages(chatId: String) {
+        val currentUid = auth.currentUser?.uid ?: return
+
+        firestore.collection("chats")
+            .document(chatId)
+            .collection("messages")
+            .orderBy("sent_at")
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    _state.value = _state.value.copy(error = "Error loading messages: ${e.message}")
+                    return@addSnapshotListener
+                }
+
+                val messages = snapshot?.documents?.map { doc ->
+                    ChatMessage(
+                        id = doc.id,
+                        text = doc.getString("content") ?: "",
+                        timestamp = doc.getTimestamp("sent_at")?.toDate()?.time ?: 0L,
+                        isMine = doc.getString("sender_id") == currentUid,
+                        senderName = if (doc.getString("sender_id") == currentUid)
+                            "You" else _state.value.header.peerName,
+                        senderAvatarUrl = if (doc.getString("sender_id") == currentUid)
+                            null else _state.value.header.peerAvatarUrl
+                    )
+                } ?: emptyList()
+
+                _state.value = _state.value.copy(messages = messages, isLoading = false)
+            }
+    }
+
+    // =====================================================
+    // 🔹 Enviar mensaje
+    // =====================================================
+    fun sendMessage(chatId: String, message: String) {
+        viewModelScope.launch {
+            val user = auth.currentUser ?: return@launch
+            val msgRef = firestore.collection("chats").document(chatId)
+                .collection("messages").document()
+
+            val messageData = mapOf(
+                "content" to message,
+                "sender_id" to user.uid,
+                "read" to false,
+                "sent_at" to Timestamp.now()
+            )
+
+            try {
+                msgRef.set(messageData).await()
+
+                firestore.collection("chats").document(chatId).update(
+                    mapOf(
+                        "last_message" to message,
+                        "updated_at" to Timestamp.now()
+                    )
+                ).await()
+
+                _state.value = _state.value.copy(input = "", canSend = false)
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _state.value = _state.value.copy(error = "Error sending message: ${e.message}")
+            }
+        }
+    }
+
+    // =====================================================
+    // 🔹 Marcar mensajes como leídos
+    // =====================================================
+    fun markMessagesAsRead(chatId: String) {
+        viewModelScope.launch {
+            val userId = auth.currentUser?.uid ?: return@launch
+            try {
+                val unreadMessages = firestore.collection("chats")
+                    .document(chatId)
+                    .collection("messages")
+                    .whereEqualTo("read", false)
+                    .get()
+                    .await()
+
+                for (doc in unreadMessages.documents) {
+                    val senderId = doc.getString("sender_id")
+                    if (senderId != userId) {
+                        doc.reference.update("read", true)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    // =====================================================
+    // 🔹 Manejar eventos desde ChatScreen
+    // =====================================================
     fun onEvent(event: ChatEvent) {
         when (event) {
             is ChatEvent.OnMessageInputChange -> {
                 _state.value = _state.value.copy(
                     input = event.input,
-                    canSend = event.input.trim().isNotEmpty()
+                    canSend = event.input.isNotBlank()
                 )
             }
 
             is ChatEvent.SendMessage -> {
-                if (event.message.trim().isNotEmpty()) {
-                    sendMessage(event.message.trim())
+                if (event.message.isNotBlank()) {
+                    sendMessage(_state.value.header.chatId, event.message.trim())
                 }
+            }
+
+            is ChatEvent.LoadChat -> {
+                loadChat(event.chatId)
+            }
+
+            ChatEvent.LoadMessages -> {
+                listenToMessages(_state.value.header.chatId)
             }
 
             ChatEvent.ShowPurchaseButton -> {
@@ -51,188 +200,9 @@ class ChatViewModel(private val chatId: String) : ViewModel() {
             ChatEvent.HidePurchaseButton -> {
                 _state.value = _state.value.copy(showPurchaseButton = false)
             }
-
-            ChatEvent.LoadMessages -> {
-                loadMessages()
-            }
         }
     }
 
-    private fun loadInitialData() {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true)
-
-            try {
-                // Simular carga de datos del header
-                val updatedHeader = ChatHeader(
-                    chatId = chatId,
-                    peerName = "Juan Pérez",
-                    peerAvatarUrl = "https://picsum.photos/200/300",
-                    listingTitle = "iPhone 14 Pro Max - Usado"
-                )
-
-                // Simular mensajes iniciales
-                val initialMessages = listOf(
-                    ChatMessage(
-                        id = "1",
-                        text = "Hola, estoy interesado en tu iPhone",
-                        timestamp = System.currentTimeMillis() - 300000, // 5 min ago
-                        isMine = true,
-                        senderName = "Tú",
-                        senderAvatarUrl = null
-                    ),
-                    ChatMessage(
-                        id = "2",
-                        text = "¡Hola! Perfecto, te puedo dar más detalles",
-                        timestamp = System.currentTimeMillis() - 240000, // 4 min ago
-                        isMine = false,
-                        senderName = updatedHeader.peerName,
-                        senderAvatarUrl = updatedHeader.peerAvatarUrl
-                    ),
-                    ChatMessage(
-                        id = "3",
-                        text = "¿En qué estado está? ¿Tiene la caja original?",
-                        timestamp = System.currentTimeMillis() - 180000, // 3 min ago
-                        isMine = true,
-                        senderName = "Tú",
-                        senderAvatarUrl = null
-                    ),
-                    ChatMessage(
-                        id = "4",
-                        text = "Está en excelente estado, sin rayones. Sí incluye la caja y todos los accesorios originales",
-                        timestamp = System.currentTimeMillis() - 120000, // 2 min ago
-                        isMine = false,
-                        senderName = updatedHeader.peerName,
-                        senderAvatarUrl = updatedHeader.peerAvatarUrl
-                    ),
-                    ChatMessage(
-                        id = "5",
-                        text = "Perfecto, me interesa comprarlo. ¿Cuándo podemos hacer la entrega?",
-                        timestamp = System.currentTimeMillis() - 60000, // 1 min ago
-                        isMine = true,
-                        senderName = "Tú",
-                        senderAvatarUrl = null
-                    )
-                )
-
-                _state.value = _state.value.copy(
-                    header = updatedHeader,
-                    messages = initialMessages,
-                    isLoading = false,
-                    error = null,
-                    showPurchaseButton = true // Mostrar después de la conversación inicial
-                )
-
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = "Error al cargar el chat: ${e.message}"
-                )
-            }
-        }
-    }
-
-    private fun loadMessages() {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true)
-
-            try {
-                // Aquí implementarías la lógica para cargar mensajes desde tu API/base de datos
-                // Por ejemplo:
-                // val messages = chatRepository.getMessages(chatId)
-
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = null
-                )
-
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    error = "Error al cargar mensajes: ${e.message}"
-                )
-            }
-        }
-    }
-
-    private fun sendMessage(message: String) {
-        viewModelScope.launch {
-            val newMessage = ChatMessage(
-                id = "msg_${System.currentTimeMillis()}",
-                text = message,
-                timestamp = System.currentTimeMillis(),
-                isMine = true,
-                senderName = "Tú",
-                senderAvatarUrl = null
-            )
-
-            // Agregar el mensaje inmediatamente a la UI
-            _state.value = _state.value.copy(
-                messages = _state.value.messages + newMessage,
-                input = "",
-                canSend = false
-            )
-
-            try {
-                // Aquí enviarías el mensaje a tu API
-                // chatRepository.sendMessage(chatId, message)
-
-                // Simular respuesta automática después de unos segundos
-                simulateResponse()
-
-            } catch (e: Exception) {
-                // En caso de error, podrías remover el mensaje o marcarlo como fallido
-                _state.value = _state.value.copy(
-                    error = "Error al enviar mensaje: ${e.message}"
-                )
-            }
-        }
-    }
-
-    private fun simulateResponse() {
-        viewModelScope.launch {
-            kotlinx.coroutines.delay(1500) // Simular delay de respuesta
-
-            val responses = listOf(
-                "Podemos encontrarnos mañana en la tarde si te parece bien",
-                "¿Te parece bien el precio de $800.000?",
-                "Puedo enviarte más fotos si gustas",
-                "¿Prefieres que nos encontremos en el centro comercial?",
-                "Perfecto, hagamos el trato entonces",
-                "¿Ya tienes el dinero listo?"
-            )
-
-            val randomResponse = responses.random()
-            val responseMessage = ChatMessage(
-                id = "response_${System.currentTimeMillis()}",
-                text = randomResponse,
-                timestamp = System.currentTimeMillis(),
-                isMine = false,
-                senderName = _state.value.header.peerName,
-                senderAvatarUrl = _state.value.header.peerAvatarUrl
-            )
-
-            _state.value = _state.value.copy(
-                messages = _state.value.messages + responseMessage
-            )
-
-            // Mostrar botón de compra después de cierta cantidad de mensajes
-            if (_state.value.messages.size >= 7 && !_state.value.showPurchaseButton) {
-                _state.value = _state.value.copy(showPurchaseButton = true)
-            }
-        }
-    }
-
-    // Funciones públicas para control manual del botón de compra
-    fun showPurchaseButton() {
-        _state.value = _state.value.copy(showPurchaseButton = true)
-    }
-
-    fun hidePurchaseButton() {
-        _state.value = _state.value.copy(showPurchaseButton = false)
-    }
-
-    // Función para limpiar errores
     fun clearError() {
         _state.value = _state.value.copy(error = null)
     }

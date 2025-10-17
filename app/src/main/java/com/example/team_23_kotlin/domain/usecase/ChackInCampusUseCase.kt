@@ -2,9 +2,12 @@ package com.example.team_23_kotlin.domain.usecase
 
 import android.util.Log
 import com.example.team_23_kotlin.domain.repository.LocationRepository
+import javax.inject.Inject
 import kotlin.math.*
 
-class CheckInCampusUseCase(private val locationRepository: LocationRepository) {
+class CheckInCampusUseCase @Inject constructor(   // 👈 Aquí agregamos @Inject
+    private val locationRepository: LocationRepository
+) {
 
     companion object {
         private const val CAMPUS_LAT = 4.601458
@@ -17,7 +20,6 @@ class CheckInCampusUseCase(private val locationRepository: LocationRepository) {
         Log.d("UseCase", "Current location: $currentLocation")
 
         if (currentLocation == null) return false
-
 
         val result = FloatArray(1)
         android.location.Location.distanceBetween(

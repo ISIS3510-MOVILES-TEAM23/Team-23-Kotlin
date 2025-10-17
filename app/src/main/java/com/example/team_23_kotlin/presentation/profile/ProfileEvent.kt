@@ -3,5 +3,7 @@ package com.example.team_23_kotlin.presentation.profile
 sealed class ProfileEvent {
     object OnEditProfileClick : ProfileEvent()
     object OnSalesClick : ProfileEvent()
-    object OnProductClick : ProfileEvent() // Ejemplo
+    object OnProductClick : ProfileEvent()
+
+    object LoadUser : ProfileEvent()
 }

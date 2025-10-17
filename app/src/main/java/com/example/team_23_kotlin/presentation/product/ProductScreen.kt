@@ -168,13 +168,23 @@ fun ProductScreen(
                         Spacer(Modifier.height(32.dp))
 
                         Button(
-                            onClick = { /* TODO abrir chat */ },
-                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                            onClick = {
+                                val product = state.product ?: return@Button
+                                viewModel.contactSeller(product.id) { chatId ->
+                                    // 🔹 Navegar al chat recién creado o existente
+                                    nav.navigate("chat/$chatId")
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                         ) {
                             Text("Contact", style = MaterialTheme.typography.titleSmall)
                         }
+
+
 
                         Spacer(Modifier.height(20.dp))
                     }
