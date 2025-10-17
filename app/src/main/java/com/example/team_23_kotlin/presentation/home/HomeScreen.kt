@@ -210,14 +210,17 @@ fun HomeScreen(
                 val recs by recsVm.recs.collectAsState()
 
                 if (recs.isNotEmpty()) {
-                    RecsCarousel(items = recs.map {
-                        ProductItem(
-                            id = it.id,
-                            title = it.title,
-                            price = "$${it.price}",
-                            imageUrl = it.images.firstOrNull()
-                        )
-                    })
+                    RecsCarousel(
+                        items = recs.map {
+                            ProductItem(
+                                id = it.id,
+                                title = it.title,
+                                price = "$${it.price}",
+                                imageUrl = it.images.firstOrNull()
+                            )
+                        },
+                        onClick = { id -> onItemClick(id) }
+                    )
                 } else {
                     Text(
                         "No personalized recommendations yet.",

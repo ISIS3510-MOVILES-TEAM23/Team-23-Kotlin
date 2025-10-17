@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentReference
+
 
 class CategoryFeedViewModel(
     private val db: FirebaseFirestore,
@@ -49,21 +52,23 @@ class CategoryFeedViewModel(
 
                 val items = docs.map { d ->
                     val data = d.data ?: emptyMap<String, Any?>()
+
+                    val categoryRef = data["category_id"] as? DocumentReference
+                    val categoryName = categoryRef?.id ?: categoryId
+
                     PostEntity(
                         id = d.id,
                         title = data["title"] as? String ?: "",
                         description = data["description"] as? String ?: "",
-                        price = when (val p = data["price"]) {
-                            is Long -> p
-                            is Int -> p.toLong()
-                            is Double -> p.toLong()
-                            else -> 0L
-                        },
+                        price = (data["price"] as? Number)?.toLong() ?: 0L,
                         images = (data["images"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
-                        userRef = data["user_ref"] as? String ?: "",
-                        status = data["status"] as? String ?: ""
+                        userId = data["user_id"] as? String ?: "",
+                        status = data["status"] as? String ?: "",
+                        createdAt = (data["created_at"] as? Timestamp)?.toDate(),
+                        categoryName = categoryName
                     )
                 }
+
 
                 trySend(items)
             }

@@ -9,6 +9,8 @@ interface PostsRepository {
     suspend fun getNewPosts(limit: Int = 10): List<PostEntity>
     suspend fun searchPosts(query: String, limit: Int = 20): List<PostEntity>
 
+    suspend fun getUserNameById(userId: String): String
+
 }
 
 data class PostEntity(
@@ -17,7 +19,7 @@ data class PostEntity(
     val description: String = "",
     val price: Long = 0,
     val images: List<String> = emptyList(),
-    val userRef: String = "",
+    val userId: String = "",
     val status: String = "",
     val createdAt: Date? = null,
     val categoryName: String = "Unknown"
@@ -28,7 +30,7 @@ data class PostEntity(
         description = "",
         price = 0,
         images = emptyList(),
-        userRef = "",
+        userId = "",
         status = "",
         createdAt = null,
         categoryName = "Unknown"

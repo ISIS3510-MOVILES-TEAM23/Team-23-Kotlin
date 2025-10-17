@@ -31,6 +31,8 @@ playServicesLocation = "21.3.0"
 gmsBom = "16.1.0"
 roomKtx = "2.8.0"
 foundation = "1.9.1"
+firebaseBom = "33.3.0"
+firebaseStorageKtx = "22.0.1"
 
 [libraries]
 androidx-compose-foundation = { module = "androidx.compose.foundation:foundation" }
@@ -73,10 +75,15 @@ play-services-maps = { module = "com.google.android.gms:play-services-maps" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "roomKtx" }
 foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-firestore-ktx = { module = "com.google.firebase:firebase-firestore-ktx" }
+firebase-storage-ktx = { module = "com.google.firebase:firebase-storage-ktx" }
+google-firebase-storage-ktx = { group = "com.google.firebase", name = "firebase-storage-ktx", version.ref = "firebaseStorageKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 hilt = { id = "com.google.dagger.hilt.android", version = "2.57.1" }
+google-services = { id = "com.google.gms.google-services", version = "4.4.2" }
 
