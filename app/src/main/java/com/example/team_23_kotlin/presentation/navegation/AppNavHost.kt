@@ -319,11 +319,7 @@ fun AppNavHost() {
             }
 
             composable(Routes.POST) {
-                PostScreen(
-                    onBack = {},
-                    onAddPhotos = {},
-                    onSubmit = { _, _, _ -> }
-                )
+                PostScreen()
             }
 
             composable(

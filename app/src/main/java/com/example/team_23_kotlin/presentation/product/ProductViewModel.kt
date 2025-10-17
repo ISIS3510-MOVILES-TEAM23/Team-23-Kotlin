@@ -31,7 +31,7 @@ class ProductViewModel(
                     title = entity.title,
                     description = entity.description,
                     price = "$${entity.price}",               // formateo simple
-                    imageUrl = entity.images.firstOrNull().orEmpty(),
+                    images = entity.images,
                     sellerName = entity.userRef.substringAfterLast("/").ifBlank { "Seller" },
                     sellerRating = 4.5f                       // placeholder (aún no hay rating)
                 )
