@@ -26,14 +26,16 @@ class ProductViewModel(
             try {
                 val entity = repo.getPostById(productId)
 
+                val sellerName = repo.getUserNameById(entity.userId)
+
                 val ui = ProductUiModel(
                     id = entity.id,
                     title = entity.title,
                     description = entity.description,
-                    price = "$${entity.price}",               // formateo simple
+                    price = "$${entity.price}",
                     images = entity.images,
-                    sellerName = entity.userRef.substringAfterLast("/").ifBlank { "Seller" },
-                    sellerRating = 4.5f                       // placeholder (aún no hay rating)
+                    sellerName = sellerName,
+                    sellerRating = 4.5f
                 )
 
                 println("📦 CategoryName being logged: ${entity.categoryName}")
