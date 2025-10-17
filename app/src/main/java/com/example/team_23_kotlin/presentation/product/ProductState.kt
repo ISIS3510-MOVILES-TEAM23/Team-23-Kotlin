@@ -13,5 +13,6 @@ data class ProductUiModel(
     val price: String,
     val images: List<String> = emptyList(),
     val sellerName: String,
-    val sellerRating: Float
+    val sellerRating: Float,
+    val sellerId : String
 )
