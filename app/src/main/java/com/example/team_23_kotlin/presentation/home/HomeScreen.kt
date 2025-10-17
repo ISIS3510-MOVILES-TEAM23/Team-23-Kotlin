@@ -253,17 +253,16 @@ fun HomeScreen(
                 else -> {
                     items(postsState.items.size) { index ->
                         val p = postsState.items[index]
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            PostCard(
-                                id = p.id,
-                                title = p.title,
-                                description = p.description,
-                                imageUrl = "",
-                                onClick = onItemClick,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
+                        PostCard(
+                            id = p.id,
+                            title = p.title,
+                            description = p.description,
+                            imageUrl = p.imageUrl,
+                            onClick = onItemClick,
+                            modifier = Modifier
+                        )
                     }
+
                 }
             }
         }
