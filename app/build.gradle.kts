@@ -1,6 +1,3 @@
-
-
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -34,13 +31,16 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
+
     buildFeatures {
         viewBinding = true
         compose = true
@@ -48,45 +48,62 @@ android {
 }
 
 dependencies {
-    implementation(libs.foundation)
-    val firebaseBom = platform("com.google.firebase:firebase-bom:33.3.0")
-    implementation(firebaseBom)
-    implementation(libs.firebase.auth.ktx)
-    implementation("com.google.firebase:firebase-firestore-ktx")
+    // --- Firebase BoM (gestiona versiones automáticamente) ---
+    implementation(platform("com.google.firebase:firebase-bom:33.3.0"))
 
+    // --- Firebase Services ---
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx")
+
+    // --- Kotlin Coroutines ---
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.play.services)
 
-    // Hilt
+    // --- Hilt ---
     implementation("com.google.dagger:hilt-android:2.57.1")
     kapt("com.google.dagger:hilt-android-compiler:2.57.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
 
-    implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.kotlinx.coroutines.play.services)
+    // --- Core AndroidX ---
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
+
+    // --- Navigation ---
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
+    implementation(libs.androidx.navigation.compose)
+
+    // --- Lifecycle ---
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+
+    // --- Compose ---
+    implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.foundation)
-    implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
-    implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.compose.material.icons.core)
-    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.compose.material.icons.extended)
+
+    // --- Coil (para imágenes) ---
     implementation(libs.coil)
+    implementation(libs.coil.compose)
     implementation(libs.coil.svg)
     implementation(libs.coil.gif)
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.play.services.location)
+
+    // --- Room (opcional si manejas DB local) ---
     implementation(libs.androidx.room.ktx)
+
+    // --- Google Play Services ---
+    implementation(libs.play.services.location)
+
+    // --- Tests ---
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -94,11 +111,4 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.coil.compose)
-    implementation("com.google.dagger:hilt-android:2.57.1")
-    kapt("com.google.dagger:hilt-android-compiler:2.57.1")
-    implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
-
-
 }
