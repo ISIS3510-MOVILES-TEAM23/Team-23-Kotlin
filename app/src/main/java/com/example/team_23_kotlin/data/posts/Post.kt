@@ -13,6 +13,6 @@
         val status: String = "",
         val createdAt: Timestamp? = null,
         val category: DocumentReference? = null,
-        val userRef: DocumentReference? = null
+        val userId: DocumentReference? = null
     )
 

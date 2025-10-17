@@ -1,10 +1,10 @@
 package com.example.team_23_kotlin.data.posts
 
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.tasks.await
+import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import java.util.Date
 
@@ -12,6 +12,9 @@ class FirestorePostsRepository(
     private val db: FirebaseFirestore
 ) : PostsRepository {
 
+    // -----------------------------------------------------------
+    // 🔹 Obtiene posts activos
+    // -----------------------------------------------------------
     override suspend fun getActivePosts(limit: Int): List<PostEntity> {
         val qs = db.collection("posts")
             .whereEqualTo("status", "active")
@@ -21,23 +24,26 @@ class FirestorePostsRepository(
 
         return qs.documents.map { snap ->
             val data = snap.data ?: emptyMap<String, Any?>()
+            val categoryRef = data["category_id"] as? DocumentReference
+            val categoryName = categoryRef?.get()?.await()?.getString("name") ?: "Unknown"
+
             PostEntity(
                 id = snap.id,
                 title = data["title"] as? String ?: "",
                 description = data["description"] as? String ?: "",
-                price = when (val p = data["price"]) {
-                    is Long -> p
-                    is Int -> p.toLong()
-                    is Double -> p.toLong()
-                    else -> 0L
-                },
+                price = (data["price"] as? Number)?.toLong() ?: 0L,
                 images = (data["images"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
-                userRef = data["user_ref"] as? String ?: "",
-                status = data["status"] as? String ?: ""
+                userId = data["user_id"] as? String ?: "",     // ✅ campo correcto
+                status = data["status"] as? String ?: "",
+                createdAt = (data["created_at"] as? Timestamp)?.toDate(),
+                categoryName = categoryName
             )
         }
     }
 
+    // -----------------------------------------------------------
+    // 🔹 Obtiene posts recientes (últimos 5 días)
+    // -----------------------------------------------------------
     override suspend fun getNewPosts(limit: Int): List<PostEntity> {
         val fiveDaysAgo = Timestamp(
             Date(System.currentTimeMillis() - 5 * 24 * 60 * 60 * 1000L)
@@ -54,22 +60,34 @@ class FirestorePostsRepository(
             .sortedByDescending { it.createdAt }
     }
 
-
+    // -----------------------------------------------------------
+    // 🔹 Mapeo genérico de snapshot a entidad
+    // -----------------------------------------------------------
     private fun mapToEntity(snap: DocumentSnapshot): PostEntity {
         val data = snap.data ?: emptyMap<String, Any?>()
+        val categoryRef = data["category_id"] as? DocumentReference
+        val categoryName = try {
+            categoryRef?.get()?.result?.getString("name") ?: "Unknown"
+        } catch (e: Exception) {
+            "Unknown"
+        }
+
         return PostEntity(
             id = snap.id,
             title = data["title"] as? String ?: "",
             description = data["description"] as? String ?: "",
             price = (data["price"] as? Number)?.toLong() ?: 0L,
             images = (data["images"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
-            userRef = data["user_ref"] as? String ?: "",
+            userId = data["user_id"] as? String ?: "",         // ✅ reemplazado userRef → userId
             status = data["status"] as? String ?: "",
-            createdAt = (data["created_at"] as? Timestamp)?.toDate()
+            createdAt = (data["created_at"] as? Timestamp)?.toDate(),
+            categoryName = categoryName
         )
     }
 
-
+    // -----------------------------------------------------------
+    // 🔹 Obtiene post por ID (ya lo tienes bien)
+    // -----------------------------------------------------------
     override suspend fun getPostById(id: String): PostEntity {
         val snap = db.collection("posts").document(id).get().await()
         if (!snap.exists()) error("Post not found")
@@ -82,19 +100,18 @@ class FirestorePostsRepository(
             id = snap.id,
             title = data["title"] as? String ?: "",
             description = data["description"] as? String ?: "",
-            price = when (val p = data["price"]) {
-                is Long -> p
-                is Int -> p.toLong()
-                is Double -> p.toLong()
-                else -> 0L
-            },
+            price = (data["price"] as? Number)?.toLong() ?: 0L,
             images = (data["images"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
-            userRef = data["user_ref"] as? String ?: "",
+            userId = data["user_id"] as? String ?: "",
             status = data["status"] as? String ?: "",
+            createdAt = (data["created_at"] as? Timestamp)?.toDate(),
             categoryName = categoryName
         )
     }
 
+    // -----------------------------------------------------------
+    // 🔹 Busca posts por texto
+    // -----------------------------------------------------------
     override suspend fun searchPosts(query: String, limit: Int): List<PostEntity> {
         if (query.isBlank()) return emptyList()
 
@@ -113,6 +130,21 @@ class FirestorePostsRepository(
             }
             .take(limit)
     }
+
+    // -----------------------------------------------------------
+    // 🔹 Obtiene nombre del usuario
+    // -----------------------------------------------------------
+    override suspend fun getUserNameById(userId: String): String {
+        return try {
+            if (userId.isBlank()) return "Usuario desconocido"
+            val doc = db.collection("users").document(userId).get().await()
+            doc.getString("name") ?: "Usuario desconocido"
+        } catch (e: Exception) {
+            Log.e("FirestorePostsRepository", "⚠️ Error al obtener nombre de usuario", e)
+            "Usuario desconocido"
+        }
+    }
+
 
     fun getPostsByCategories(
         categories: List<String>,
@@ -141,11 +173,4 @@ class FirestorePostsRepository(
                 onResult(emptyList())
             }
     }
-
-
-
-
-
-
-
 }
