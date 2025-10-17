@@ -36,7 +36,8 @@ class ProductViewModel(
                     price = "$${entity.price}",
                     images = entity.images,
                     sellerName = sellerName,
-                    sellerRating = 4.5f
+                    sellerRating = 4.5f,
+                    sellerId = entity.userId
                 )
 
                 println("📦 CategoryName being logged: ${entity.categoryName}")

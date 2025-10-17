@@ -213,20 +213,14 @@ fun ProductScreen(
                                     text = product.sellerName,
                                     style = MaterialTheme.typography.bodyMedium,
                                     modifier = Modifier.clickable {
-                                        nav.navigate("seller/${product.id}")
+                                        nav.navigate("seller/${product.sellerId}")
                                     }
-                                )
-                                Text(
-                                    text = "Math Student",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
 
                         Spacer(Modifier.height(32.dp))
 
-                        // 🔹 Botón de contacto
                         Button(
                             onClick = {
                                 val product = state.product ?: return@Button
