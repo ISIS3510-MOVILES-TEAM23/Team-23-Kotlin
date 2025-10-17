@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 @HiltViewModel
 class ConfirmPurchaseViewModel @Inject constructor(
@@ -320,4 +321,81 @@ class ConfirmPurchaseViewModel @Inject constructor(
             BluetoothState.ERROR -> ConnectionStatus.FAILED
         }
     }
+
+    fun recordSale(chatId: String) {
+        viewModelScope.launch {
+            val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+            val currentUser = auth.currentUser ?: return@launch
+
+            try {
+                // 1️⃣ Obtener info del chat original
+                val chatDoc = firestore.collection("chats").document(chatId).get().await()
+                if (!chatDoc.exists()) {
+                    Log.e("ConfirmPurchaseVM", "❌ No chat found for $chatId")
+                    return@launch
+                }
+
+                val productId = chatDoc.getString("product_id") ?: return@launch
+                val sellerId = chatDoc.getString("seller_id") ?: return@launch
+                val buyerId = chatDoc.getString("buyer_id") ?: return@launch
+
+                // 2️⃣ Obtener info del producto
+                val postDoc = firestore.collection("posts").document(productId).get().await()
+                val price = postDoc.getLong("price") ?: 0L
+
+                // 3️⃣ Crear registro de venta
+                val saleRef = firestore.collection("sales").document()
+                val saleData = mapOf(
+                    "_id" to saleRef.id,
+                    "buyer_ref" to firestore.document("users/$buyerId"),
+                    "seller_ref" to firestore.document("users/$sellerId"),
+                    "post_ref" to firestore.document("posts/$productId"),
+                    "price" to price,
+                    "status" to "completed",
+                    "created_at" to com.google.firebase.Timestamp.now(),
+                    "updated_at" to com.google.firebase.Timestamp.now()
+                )
+
+                saleRef.set(saleData).await()
+
+                // 4️⃣ Marcar el producto como vendido
+                firestore.collection("posts").document(productId)
+                    .update("status", "sold")
+                    .await()
+
+                // 5️⃣ Buscar todos los chats del mismo producto y vendedor
+                val relatedChats = firestore.collection("chats")
+                    .whereEqualTo("product_id", productId)
+                    .whereEqualTo("seller_id", sellerId)
+                    .get()
+                    .await()
+
+                Log.i("ConfirmPurchaseVM", "🗑️ Found ${relatedChats.size()} related chats to delete")
+
+                // 6️⃣ Eliminar cada chat + sus subcolecciones "messages"
+                for (chat in relatedChats.documents) {
+                    val chatRef = chat.reference
+
+                    // Primero eliminar todos los mensajes
+                    val messagesSnapshot = chatRef.collection("messages").get().await()
+                    for (msg in messagesSnapshot.documents) {
+                        msg.reference.delete().await()
+                    }
+
+                    // Luego eliminar el documento principal del chat
+                    chatRef.delete().await()
+                    Log.i("ConfirmPurchaseVM", "🧹 Chat ${chat.id} deleted from Firestore")
+                }
+
+                Log.i("ConfirmPurchaseVM", "✅ Sale recorded and chats deleted successfully for product $productId")
+
+            } catch (e: Exception) {
+                Log.e("ConfirmPurchaseVM", "❌ Error recording sale: ${e.message}", e)
+            }
+        }
+    }
+
+
+
 }

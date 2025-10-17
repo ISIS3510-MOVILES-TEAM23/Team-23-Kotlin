@@ -74,17 +74,17 @@ fun ConfirmPurchaseScreen(
 
     // Manejar compra exitosa
     LaunchedEffect(state.purchaseConfirmed) {
-        Log.d("ConfirmPurchaseScreen", "LaunchedEffect triggered - purchaseConfirmed = ${state.purchaseConfirmed}")
         if (state.purchaseConfirmed) {
+            // ✅ Registrar la venta
+            viewModel.recordSale(chatId)
 
-            kotlinx.coroutines.delay(2000) // Mostrar confirmación por 2 segundos
+            // Esperar 2 segundos y navegar
+            kotlinx.coroutines.delay(2000)
             viewModel.resetState()
-            Log.d("ConfirmPurchaseScreen", "ESTADO: ${state}")
             onPurchaseSuccess()
-
-
         }
     }
+
 
     Column(
         modifier = Modifier

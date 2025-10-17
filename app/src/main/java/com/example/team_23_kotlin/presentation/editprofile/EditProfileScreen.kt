@@ -17,14 +17,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.example.team_23_kotlin.presentation.profile.ProfileScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
-    viewModel: EditProfileViewModel = viewModel(),
+    viewModel: EditProfileViewModel = hiltViewModel(),
     onBack: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
@@ -90,15 +89,16 @@ fun EditProfileScreen(
 
             // Nombre & handle fijo
             Text(
-                text = "Sofia Ramirez",
+                text = state.name.ifEmpty { "User" },
                 style = MaterialTheme.typography.titleLarge,
                 color = Color.Black
             )
             Text(
-                text = "@sofii",
+                text = "@${state.email.substringBefore("@")}",
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.Gray
             )
+
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -191,25 +191,51 @@ fun EditProfileScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
+                val selected = state.contactPreferences
+
                 OutlinedButton(
-                    onClick = { /* TODO: Handle push notifications */ },
+                    onClick = {
+                        val updated = if ("push notifications" in selected)
+                            selected - "push notifications"
+                        else
+                            selected + "push notifications"
+                        viewModel.onEvent(EditProfileEvent.OnContactPrefsChanged(updated))
+                    },
                     modifier = Modifier
                         .weight(1f)
                         .height(48.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if ("push notifications" in selected)
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)
+                        else Color.Transparent
+                    )
                 ) {
-                    Text("Push notifications", style = MaterialTheme.typography.titleSmall, color = Color.Black, fontSize = 13.sp)
+                    Text("Push notifications", color = Color.Black, fontSize = 13.sp)
                 }
+
                 OutlinedButton(
-                    onClick = { /* TODO: Handle email */ },
+                    onClick = {
+                        val updated = if ("email" in selected)
+                            selected - "email"
+                        else
+                            selected + "email"
+                        viewModel.onEvent(EditProfileEvent.OnContactPrefsChanged(updated))
+                    },
                     modifier = Modifier
                         .weight(1f)
                         .height(48.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if ("email" in selected)
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)
+                        else Color.Transparent
+                    )
                 ) {
-                    Text("Email", style = MaterialTheme.typography.titleSmall, color = Color.Black, fontSize = 13.sp)
+                    Text("Email", color = Color.Black, fontSize = 13.sp)
                 }
             }
+
 
             Spacer(modifier = Modifier.weight(1f))
 
@@ -224,6 +250,31 @@ fun EditProfileScreen(
             ) {
                 Text("Save Changes", color = Color.White, style = MaterialTheme.typography.titleSmall)
             }
+            if (state.isSaving) {
+                CircularProgressIndicator(
+                    modifier = Modifier.padding(top = 12.dp),
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
+
+            state.error?.let { error ->
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+
+            if (state.success) {
+                Text(
+                    text = "Profile updated successfully!",
+                    color = Color(0xFF2E7D32),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+
         }
     }
 }
