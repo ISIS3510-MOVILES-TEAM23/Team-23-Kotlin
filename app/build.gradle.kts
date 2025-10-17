@@ -62,7 +62,6 @@ dependencies {
 
     // --- Hilt ---
     implementation("com.google.dagger:hilt-android:2.57.1")
-    implementation(libs.google.firebase.storage.ktx)
     kapt("com.google.dagger:hilt-android-compiler:2.57.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
 
