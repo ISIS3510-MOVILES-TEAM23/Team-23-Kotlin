@@ -48,10 +48,13 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.navigation.NavController
+import com.example.team_23_kotlin.presentation.navegation.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostScreen(
+    navController: NavController,
     thumbs: List<Int> = emptyList(),
 ) {
     val focusManager = LocalFocusManager.current
@@ -102,7 +105,14 @@ fun PostScreen(
     // Toasts VM
     LaunchedEffect(s.errorMessage) { s.errorMessage?.let { scope.launch { snackbarHost.showSnackbar(it) } } }
     LaunchedEffect(s.postedOk) {
-        if (s.postedOk) scope.launch { snackbarHost.showSnackbar("Post created!") }
+        if (s.postedOk) {
+            scope.launch { snackbarHost.showSnackbar("Post created!") }
+            // ✅ ir al perfil (My Products) después de postear
+            navController.navigate(Routes.PROFILE) {
+                popUpTo(Routes.POST) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
     }
 
     Scaffold(
