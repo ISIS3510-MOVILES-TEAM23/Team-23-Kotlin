@@ -51,6 +51,7 @@ import java.util.Locale
 import androidx.navigation.NavController
 import com.example.team_23_kotlin.presentation.navegation.Routes
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostScreen(
@@ -114,6 +115,44 @@ fun PostScreen(
             }
         }
     }
+
+    // --- Detección de sacudida del dispositivo ---
+    val sensorManager = remember { ctx.getSystemService(android.content.Context.SENSOR_SERVICE) as android.hardware.SensorManager }
+    val shakeThreshold = 50f // sensibilidad de detección (puedes ajustar)
+    var lastShakeTime by remember { mutableStateOf(0L) }
+
+    DisposableEffect(Unit) {
+        val sensorListener = object : android.hardware.SensorEventListener {
+            override fun onSensorChanged(event: android.hardware.SensorEvent?) {
+                event?.let {
+                    val x = it.values[0]
+                    val y = it.values[1]
+                    val z = it.values[2]
+                    val acceleration = kotlin.math.sqrt((x * x + y * y + z * z).toDouble()).toFloat() - 9.8f
+                    val currentTime = System.currentTimeMillis()
+
+                    // Evitar múltiples disparos seguidos
+                    if (acceleration > shakeThreshold && currentTime - lastShakeTime > 1500) {
+                        lastShakeTime = currentTime
+                        vm.onEvent(PostEvent.ClearForm)
+                        scope.launch {
+                            snackbarHost.showSnackbar("Formulario limpiado ✨")
+                        }
+                    }
+                }
+            }
+
+            override fun onAccuracyChanged(sensor: android.hardware.Sensor?, accuracy: Int) {}
+        }
+
+        val accelerometer = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER)
+        sensorManager.registerListener(sensorListener, accelerometer, android.hardware.SensorManager.SENSOR_DELAY_UI)
+
+        onDispose {
+            sensorManager.unregisterListener(sensorListener)
+        }
+    }
+
 
     Scaffold(
         topBar = {
@@ -217,6 +256,21 @@ fun PostScreen(
                 hint = hint,
                 imeAction = ImeAction.Done,
                 onIme = { focusManager.clearFocus() }
+            )
+
+            Spacer(Modifier.height(14.dp))
+
+
+
+            FieldLabel("Punto de recogida")
+            PickupPointDropdown(
+                pickupPoints = pickupPoints,
+                selectedName = s.pickupPointName,
+                onSelect = { point ->
+                    vm.onEvent(PostEvent.PickupPointSelected(point.name, point.coordinates))
+                },
+                hairline = hairline,
+                hint = hint
             )
 
             Spacer(Modifier.height(24.dp))
@@ -352,6 +406,74 @@ private fun CategoryDropdown(
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PickupPointDropdown(
+    pickupPoints: List<PickupPoint>,
+    selectedName: String?,
+    onSelect: (PickupPoint) -> Unit,
+    hairline: androidx.compose.ui.graphics.Color,
+    hint: androidx.compose.ui.graphics.Color
+) {
+    val cs = MaterialTheme.colorScheme
+    val ty = MaterialTheme.typography
+    val shape = RoundedCornerShape(16.dp)
+    var expanded by remember { mutableStateOf(false) }
+
+    val labelText = selectedName ?: "Selecciona un punto de recogida"
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        TextField(
+            value = labelText,
+            onValueChange = {},
+            readOnly = true,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            singleLine = true,
+            shape = shape,
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .border(1.dp, hairline, shape),
+            placeholder = {
+                Text("Selecciona un punto de recogida", color = hint, style = ty.bodyMedium)
+            },
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = cs.surface,
+                unfocusedContainerColor = cs.surface,
+                focusedIndicatorColor = cs.surface,
+                unfocusedIndicatorColor = cs.surface,
+                cursorColor = cs.onSurface,
+                focusedTextColor = cs.onSurface,
+                unfocusedTextColor = cs.onSurface
+            ),
+            textStyle = ty.bodyMedium.copy(
+                color = if (selectedName == null) hint else cs.onSurface,
+                platformStyle = PlatformTextStyle(includeFontPadding = false)
+            )
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            pickupPoints.forEach { point ->
+                DropdownMenuItem(
+                    text = { Text(point.name) },
+                    onClick = {
+                        onSelect(point)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
 
 /* ---------- Helpers y Sub-composables (sin cambios visuales) ---------- */
 

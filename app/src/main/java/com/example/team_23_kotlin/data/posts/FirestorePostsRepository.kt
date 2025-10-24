@@ -43,8 +43,11 @@ class FirestorePostsRepository(
                 userId = data["user_id"] as? String ?: "",
                 status = data["status"] as? String ?: "",
                 createdAt = (data["created_at"] as? Timestamp)?.toDate(),
-                categoryName = categoryName
-            )
+                categoryName = categoryName,
+                pickupName = data["pickup_point_name"] as? String ?: "",
+                pickupCoords = data["pickup_coordinates"] as? String ?: "",
+
+                )
         }
     }
 
@@ -88,8 +91,11 @@ class FirestorePostsRepository(
             userId = data["user_id"] as? String ?: "",
             status = data["status"] as? String ?: "",
             createdAt = (data["created_at"] as? Timestamp)?.toDate(),
-            categoryName = categoryName
-        )
+            categoryName = categoryName,
+            pickupName = data["pickup_point_name"] as? String ?: "",
+            pickupCoords = data["pickup_coordinates"] as? String ?: "",
+
+            )
     }
 
     // -----------------------------------------------------------
@@ -112,8 +118,11 @@ class FirestorePostsRepository(
             userId = data["user_id"] as? String ?: "",
             status = data["status"] as? String ?: "",
             createdAt = (data["created_at"] as? Timestamp)?.toDate(),
-            categoryName = categoryName
-        )
+            categoryName = categoryName,
+            pickupName = data["pickup_point_name"] as? String ?: "",
+            pickupCoords = data["pickup_coordinates"] as? String ?: "",
+
+            )
     }
 
     // -----------------------------------------------------------
@@ -236,7 +245,9 @@ class FirestorePostsRepository(
             "category_name" to (post.category?.id ?: ""),
             "status" to "active",
             "created_at" to Timestamp.now(),
-            "user_id" to uid
+            "user_id" to uid,
+            "pickup_point_name" to post.pickupName,
+            "pickup_coordinates" to post.pickupCoords
         )
 
         newDoc.set(data).await()

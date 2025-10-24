@@ -37,7 +37,9 @@ class ProductViewModel(
                     images = entity.images,
                     sellerName = sellerName,
                     sellerRating = 4.5f,
-                    sellerId = entity.userId
+                    sellerId = entity.userId,
+                    pickupName = entity.pickupName,
+                    pickupCoords = entity.pickupCoords
                 )
 
                 println("📦 CategoryName being logged: ${entity.categoryName}")

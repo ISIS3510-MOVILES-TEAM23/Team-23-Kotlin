@@ -157,6 +157,9 @@ fun AppNavHost() {
                     onGoToAuth = { nav.navigate(Routes.LOGIN) },
                     onItemClick = { productId ->
                         nav.navigate("product/$productId")
+                    },
+                    onCategoryClick = { categoryId, categoryTitle ->
+                        nav.navigate(Routes.categoryFeed(categoryId, categoryTitle))
                     }
                 )
             }
