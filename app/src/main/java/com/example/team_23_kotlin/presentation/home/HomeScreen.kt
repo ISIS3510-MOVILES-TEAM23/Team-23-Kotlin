@@ -34,6 +34,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.team_23_kotlin.R
 import com.example.team_23_kotlin.data.repository.LocationRepositoryImpl
 import com.example.team_23_kotlin.domain.usecase.CheckInCampusUseCase
 import com.example.team_23_kotlin.core.ui.NetworkImage
@@ -56,7 +57,8 @@ data class ProductItem(
 fun HomeScreen(
     onGoToAuth: () -> Unit = {},
     onSearch: (String) -> Unit = {},
-    onItemClick: (String) -> Unit = {}
+    onItemClick: (String) -> Unit = {},
+    onCategoryClick: (String, String) -> Unit = { _, _ -> },
 ) {
     val postsRepo = remember { FirestorePostsRepository(FirebaseFirestore.getInstance()) }
     val postsVm: HomePostsViewModel = viewModel(factory = object : ViewModelProvider.Factory {
@@ -77,6 +79,20 @@ fun HomeScreen(
     })
 
     val isInCampus by viewModel.isInCampus.collectAsState()
+
+    val popupState by viewModel.popupState.collectAsState()
+    var showPopup by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadMostVisitedCategory()
+    }
+
+    LaunchedEffect(popupState.favoriteCategory) {
+        if (popupState.favoriteCategory != null) {
+            showPopup = true
+        }
+    }
+
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -267,6 +283,89 @@ fun HomeScreen(
             }
         }
     }
+    if (showPopup && popupState.favoriteCategory != null) {
+        val favoriteCategoryName = popupState.favoriteCategory!!.replaceFirstChar { it.uppercase() }
+
+        // Tu lista local de categorías
+        val categories = listOf(
+            Triple("Furniture", "c2", R.drawable.ic_furniture),
+            Triple("Bikes", "c3", R.drawable.ic_bikes),
+            Triple("Books", "c1", R.drawable.ic_books),
+            Triple("Electronics", "c4", R.drawable.ic_electronics),
+            Triple("Clothes", "c5", R.drawable.ic_clothes),
+            Triple("Tickets", "c6", R.drawable.ic_electronics),
+            Triple("University Club", "c7", R.drawable.ic_uni)
+        )
+
+        // Buscar coincidencia con el nombre
+        val matchedCategory = categories.firstOrNull {
+            it.first.equals(favoriteCategoryName, ignoreCase = true)
+        }
+
+        AlertDialog(
+            onDismissRequest = { showPopup = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = {
+                Text(
+                    text = "👋 ¡Hola de nuevo!",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Parece que te encantan los productos de la categoría ",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = favoriteCategoryName,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "¡Tenemos nuevas publicaciones que podrían gustarte! " +
+                                "¿Quieres verlas ahora?",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPopup = false
+                        matchedCategory?.let { (title, id, _) ->
+                            onCategoryClick(id, title)
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("Ver publicaciones")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPopup = false }) {
+                    Text("Cerrar")
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 4.dp
+        )
+    }
+
+
+
 }
 
 @Composable

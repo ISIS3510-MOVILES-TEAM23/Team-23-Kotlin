@@ -33,6 +33,7 @@ roomKtx = "2.8.0"
 foundation = "1.9.1"
 firebaseBom = "33.3.0"
 firebaseStorageKtx = "22.0.1"
+playServicesMaps = "19.2.0"
 
 [libraries]
 androidx-compose-foundation = { module = "androidx.compose.foundation:foundation" }
@@ -78,6 +79,7 @@ foundation = { group = "androidx.compose.foundation", name = "foundation", versi
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-firestore-ktx = { module = "com.google.firebase:firebase-firestore-ktx" }
 firebase-storage-ktx = { module = "com.google.firebase:firebase-storage-ktx" }
+gms-play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

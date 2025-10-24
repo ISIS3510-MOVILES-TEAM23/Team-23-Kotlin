@@ -32,6 +32,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Team23Kotlin">
+
+        <!-- 🔑 Agrega esto dentro de <application> -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyCre4oooBr4zFYj6p-p7XyMfJEnnAWOcM8" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">

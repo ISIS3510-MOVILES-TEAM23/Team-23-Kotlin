@@ -36,8 +36,11 @@ class FirestorePostsRepository(
                 userId = data["user_id"] as? String ?: "",     // ✅ campo correcto
                 status = data["status"] as? String ?: "",
                 createdAt = (data["created_at"] as? Timestamp)?.toDate(),
-                categoryName = categoryName
-            )
+                categoryName = categoryName,
+                pickupName = data["pickup_point_name"] as? String ?: "",
+                pickupCoords = data["pickup_coordinates"] as? String ?: "",
+
+                )
         }
     }
 
@@ -81,8 +84,11 @@ class FirestorePostsRepository(
             userId = data["user_id"] as? String ?: "",         // ✅ reemplazado userRef → userId
             status = data["status"] as? String ?: "",
             createdAt = (data["created_at"] as? Timestamp)?.toDate(),
-            categoryName = categoryName
-        )
+            categoryName = categoryName,
+            pickupName = data["pickup_point_name"] as? String ?: "",
+            pickupCoords = data["pickup_coordinates"] as? String ?: "",
+
+            )
     }
 
     // -----------------------------------------------------------
@@ -105,8 +111,11 @@ class FirestorePostsRepository(
             userId = data["user_id"] as? String ?: "",
             status = data["status"] as? String ?: "",
             createdAt = (data["created_at"] as? Timestamp)?.toDate(),
-            categoryName = categoryName
-        )
+            categoryName = categoryName,
+            pickupName = data["pickup_point_name"] as? String ?: "",
+            pickupCoords = data["pickup_coordinates"] as? String ?: "",
+
+            )
     }
 
     // -----------------------------------------------------------

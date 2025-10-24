@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import com.google.firebase.storage.ktx.storageMetadata
+import kotlinx.coroutines.flow.update
 
 class PostViewModel(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
@@ -57,6 +58,26 @@ class PostViewModel(
                 }
                 _state.value = _state.value.copy(photoTokens = newList)
             }
+            is PostEvent.ClearForm -> {
+                _state.update { it.copy(
+                    title = "",
+                    description = "",
+                    price = "",
+                    categoryId = null,
+                    categoryName = null,
+                    photoTokens = emptyList()
+                ) }
+            }
+            is PostEvent.PickupPointSelected -> {
+                _state.update {
+                    it.copy(
+                        pickupPointName = e.name,
+                        pickupCoordinates = e.coordinates
+                    )
+                }
+            }
+
+
 
             PostEvent.AddPhotosClick -> {}
             PostEvent.SubmitClicked -> submitPost()
@@ -108,6 +129,10 @@ class PostViewModel(
             _state.value = s.copy(errorMessage = "Please select a category.")
             return
         }
+        if (s.pickupPointName == null) {
+            _state.value = s.copy(errorMessage = "Please select a pickup point.")
+            return
+        }
 
         viewModelScope.launch {
             if (auth.currentUser == null) {
@@ -140,7 +165,9 @@ class PostViewModel(
                     "category_name" to s.categoryName,
                     "status" to "active",
                     "created_at" to FieldValue.serverTimestamp(),
-                    "user_id" to uid
+                    "user_id" to uid,
+                    "pickup_point_name" to s.pickupPointName,
+                    "pickup_coordinates" to s.pickupCoordinates
                 )
 
                 newDoc.set(data).await()

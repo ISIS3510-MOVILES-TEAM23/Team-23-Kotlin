@@ -22,7 +22,9 @@ data class PostEntity(
     val userId: String = "",
     val status: String = "",
     val createdAt: Date? = null,
-    val categoryName: String = "Unknown"
+    val categoryName: String = "Unknown",
+    val pickupName: String = "",
+    val pickupCoords: String = ""
 ) {
     constructor() : this(
         id = "",
@@ -33,6 +35,9 @@ data class PostEntity(
         userId = "",
         status = "",
         createdAt = null,
-        categoryName = "Unknown"
+        categoryName = "Unknown",
+        pickupName = "",
+        pickupCoords = ""
+
     )
 }

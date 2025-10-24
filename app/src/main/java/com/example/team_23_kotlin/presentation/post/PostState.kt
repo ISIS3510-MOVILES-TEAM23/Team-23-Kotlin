@@ -5,6 +5,19 @@ data class Category(
     val name: String
 )
 
+data class PickupPoint(
+    val name: String,
+    val coordinates: String
+)
+
+val pickupPoints = listOf(
+    PickupPoint("Edificio SD", "4.6030761,-74.0676922"),
+    PickupPoint("Edificio ML", "4.6030761,-74.0676922"),
+    PickupPoint("El Bobo", "4.6012414,-74.0659291"),
+    PickupPoint("La Caneca", "4.6001055,-74.0647088")
+)
+
+
 data class PostState(
     val title: String = "",
     val description: String = "",
@@ -23,5 +36,9 @@ data class PostState(
 
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
-    val postedOk: Boolean = false
-)
+    val postedOk: Boolean = false,
+
+    val pickupPointName: String? = null,
+    val pickupCoordinates: String? = null,
+
+    )

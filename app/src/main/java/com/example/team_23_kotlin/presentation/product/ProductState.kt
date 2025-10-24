@@ -14,5 +14,7 @@ data class ProductUiModel(
     val images: List<String> = emptyList(),
     val sellerName: String,
     val sellerRating: Float,
-    val sellerId : String
+    val sellerId : String,
+    val pickupName: String,
+    val pickupCoords: String
 )

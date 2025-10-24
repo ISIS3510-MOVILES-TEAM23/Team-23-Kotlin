@@ -16,4 +16,10 @@ sealed class PostEvent {
     data class PhotoRemovedAt(val index: Int): PostEvent()
 
     object SubmitClicked: PostEvent()
+
+    object ClearForm : PostEvent()
+
+    data class PickupPointSelected(val name: String, val coordinates: String) : PostEvent()
+
+
 }

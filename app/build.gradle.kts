@@ -62,6 +62,7 @@ dependencies {
 
     // --- Hilt ---
     implementation("com.google.dagger:hilt-android:2.57.1")
+    implementation(libs.gms.play.services.maps)
     kapt("com.google.dagger:hilt-android-compiler:2.57.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
 
@@ -111,4 +112,8 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // --- Google Maps Compose ---
+    implementation("com.google.maps.android:maps-compose:4.4.1")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
 }
