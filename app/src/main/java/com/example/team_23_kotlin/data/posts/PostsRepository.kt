@@ -1,5 +1,6 @@
 package com.example.team_23_kotlin.data.posts
 
+import android.net.Uri
 import java.util.Date
 
 interface PostsRepository {

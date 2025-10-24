@@ -325,7 +325,7 @@ fun AppNavHost() {
             }
 
             composable(Routes.POST) {
-                PostScreen()
+                PostScreen(navController = nav)
             }
 
             composable(

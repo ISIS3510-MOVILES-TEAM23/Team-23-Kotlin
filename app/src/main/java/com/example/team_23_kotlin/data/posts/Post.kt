@@ -14,7 +14,7 @@
         val createdAt: Timestamp? = null,
         val category: DocumentReference? = null,
         val userId: DocumentReference? = null,
-        val pickupName : String = "",
-        val pickupCoords : String = ""
+        val pickupName: String = "",
+        val pickupCoords: String? = ""
     )
 
