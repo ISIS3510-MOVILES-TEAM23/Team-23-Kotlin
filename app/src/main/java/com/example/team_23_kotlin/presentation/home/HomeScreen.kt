@@ -69,6 +69,7 @@ fun HomeScreen(
     })
     val postsState by postsVm.state.collectAsState()
     val context = LocalContext.current
+    val postVm: com.example.team_23_kotlin.presentation.post.PostViewModel = viewModel()
     val viewModel: HomeViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             val repo = LocationRepositoryImpl(context)
@@ -105,6 +106,9 @@ fun HomeScreen(
         ) == PackageManager.PERMISSION_GRANTED
         if (hasPermission) viewModel.refreshCampusStatus()
         else permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+
+        // 🌐 Intentar sincronizar borradores locales (Eventual Connectivity)
+        postVm.syncDraftIfNeeded(context)
     }
 
     var query by rememberSaveable { mutableStateOf("") }

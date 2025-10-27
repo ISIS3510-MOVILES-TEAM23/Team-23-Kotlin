@@ -276,7 +276,7 @@ fun PostScreen(
             Spacer(Modifier.height(24.dp))
 
             Button(
-                onClick = { vm.onEvent(PostEvent.SubmitClicked) },
+                onClick = { vm.onEvent(PostEvent.SubmitClicked, ctx) },
                 shape = RoundedCornerShape(12.dp),
                 enabled = !s.isSaving,
                 colors = ButtonDefaults.buttonColors(
