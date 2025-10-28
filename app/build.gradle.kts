@@ -63,6 +63,7 @@ dependencies {
     // --- Hilt ---
     implementation("com.google.dagger:hilt-android:2.57.1")
     implementation(libs.gms.play.services.maps)
+    implementation(libs.androidx.compose.foundation.foundation)
     kapt("com.google.dagger:hilt-android-compiler:2.57.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
 

@@ -2,9 +2,11 @@ package com.example.team_23_kotlin.presentation.home
 
 import HomeViewModel
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +15,7 @@ import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -44,6 +47,39 @@ import com.example.team_23_kotlin.data.search.FirestoreSearchEventsRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.graphics.Color
+
+// =====================
+// Historial de búsqueda (SharedPreferences con CSV)
+// =====================
+private class SearchHistoryManager(context: Context) {
+    private val prefs = context.getSharedPreferences("search_history", Context.MODE_PRIVATE)
+    private val key = "queries_csv"
+
+    fun getHistory(): List<String> {
+        val csv = prefs.getString(key, "") ?: ""
+        if (csv.isBlank()) return emptyList()
+        return csv.split("|||").filter { it.isNotBlank() }
+    }
+
+    fun saveQuery(q: String, maxItems: Int = 5) {
+        val query = q.trim()
+        if (query.isBlank()) return
+        val list = getHistory().toMutableList()
+        list.remove(query)
+        list.add(0, query)
+        while (list.size > maxItems) {
+            list.removeAt(list.lastIndex)
+        }
+        prefs.edit().putString(key, list.joinToString("|||")).apply()
+    }
+
+    fun clear() {
+        prefs.edit().putString(key, "").apply()
+    }
+}
 
 data class ProductItem(
     val id: String,
@@ -94,7 +130,6 @@ fun HomeScreen(
         }
     }
 
-
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { granted -> if (granted) viewModel.refreshCampusStatus() }
@@ -111,8 +146,15 @@ fun HomeScreen(
         postVm.syncDraftIfNeeded(context)
     }
 
+    // =====================
+    // Estado de búsqueda + historial local con dropdown
+    // =====================
     var query by rememberSaveable { mutableStateOf("") }
     var searchResults by remember { mutableStateOf<List<PostEntity>>(emptyList()) }
+    var showHistory by remember { mutableStateOf(false) }
+    val searchHistoryMgr = remember { SearchHistoryManager(context) }
+    var recentSearches by remember { mutableStateOf(searchHistoryMgr.getHistory()) }
+
     val scope = rememberCoroutineScope()
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
@@ -147,28 +189,96 @@ fun HomeScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // =====================
+            // 🔍 Search bar + dropdown de recientes
+            // =====================
             item {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = {
-                        query = it
-                        scope.launch {
-                            searchResults = postsRepo.searchPosts(it, limit = 5)
-                        }
-                        onSearch(it)
-                    },
-                    leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-                    placeholder = { Text("Search products") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedBorderColor = MaterialTheme.colorScheme.background,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.background
+                Box {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { text ->
+                            query = text
+                            // No guardamos nada aquí; solo mostramos el dropdown
+                            showHistory = true
+                        },
+                        leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                        trailingIcon = {
+                            // Botón explícito de "buscar" para guardar en historial y ejecutar búsqueda
+                            TextButton(
+                                onClick = {
+                                    val q = query.trim()
+                                    if (q.isNotEmpty()) {
+                                        searchHistoryMgr.saveQuery(q)
+                                        recentSearches = searchHistoryMgr.getHistory()
+                                        showHistory = false
+                                        scope.launch {
+                                            searchResults = postsRepo.searchPosts(q, limit = 5)
+                                        }
+                                        onSearch(q)
+                                    }
+                                }
+                            ) {
+                                Text("Search")
+                            }
+                        },
+                        placeholder = { Text("Search products") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showHistory = true },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedBorderColor = MaterialTheme.colorScheme.background,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.background
+                        )
                     )
-                )
+
+                    DropdownMenu(
+                        expanded = showHistory,
+                        onDismissRequest = { showHistory = false },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFF0F0F0))
+                    ) {
+                        if (recentSearches.isEmpty()) {
+                            DropdownMenuItem(
+                                text = { Text("No recent searches", color = Color.Gray) },
+                                onClick = { /* no-op */ }
+                            )
+                        } else {
+                            recentSearches.forEach { item ->
+                                DropdownMenuItem(
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Outlined.AccessTime,
+                                            contentDescription = null,
+                                            tint = Color.Gray
+                                        )
+                                    },
+                                    text = { Text(item) },
+                                    onClick = {
+                                        query = item
+                                        showHistory = false
+                                        scope.launch {
+                                            searchResults = postsRepo.searchPosts(item, limit = 5)
+                                        }
+                                        onSearch(item)
+                                    }
+                                )
+                            }
+                            Divider()
+                            DropdownMenuItem(
+                                text = { Text("Clear history") },
+                                onClick = {
+                                    searchHistoryMgr.clear()
+                                    recentSearches = emptyList()
+                                }
+                            )
+                        }
+                    }
+                }
             }
 
             // 🔎 Resultados de búsqueda
@@ -207,8 +317,6 @@ fun HomeScreen(
 
             val currentUser = FirebaseAuth.getInstance().currentUser
             android.util.Log.d("AUTH", "UID = ${currentUser?.uid}, Email = ${currentUser?.email}")
-
-
 
             item {
                 val recsVm: RecommendationsViewModel = viewModel(factory = object : ViewModelProvider.Factory {
@@ -257,7 +365,12 @@ fun HomeScreen(
             when {
                 postsState.isLoading -> {
                     item {
-                        Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
                             CircularProgressIndicator()
                         }
                     }
@@ -282,11 +395,11 @@ fun HomeScreen(
                             modifier = Modifier
                         )
                     }
-
                 }
             }
         }
     }
+
     if (showPopup && popupState.favoriteCategory != null) {
         val favoriteCategoryName = popupState.favoriteCategory!!.replaceFirstChar { it.uppercase() }
 
@@ -367,9 +480,6 @@ fun HomeScreen(
             tonalElevation = 4.dp
         )
     }
-
-
-
 }
 
 @Composable
