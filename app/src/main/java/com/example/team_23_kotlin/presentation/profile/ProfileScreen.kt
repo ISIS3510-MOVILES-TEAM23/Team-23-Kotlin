@@ -39,9 +39,7 @@ fun ProfileScreen(
         when {
             state.value.isLoading -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
@@ -50,9 +48,7 @@ fun ProfileScreen(
 
             state.value.error != null -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -89,18 +85,14 @@ fun ProfileScreen(
 
                     // 🔹 Contenido del perfil
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(25.dp),
+                        modifier = Modifier.fillMaxWidth().padding(25.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // 🔹 Foto del usuario
                         Box(
-                            modifier = Modifier
-                                .size(120.dp)
-                                .clip(CircleShape)
+                            modifier = Modifier.size(120.dp).clip(CircleShape)
                         ) {
                             AsyncImage(
                                 model = state.value.photoUrl ?: "https://picsum.photos/200",
@@ -112,89 +104,63 @@ fun ProfileScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // 🔹 Datos del usuario (desde FirebaseAuth)
-                        Text(
-                            state.value.userName,
-                            style = MaterialTheme.typography.titleMedium
-                        )
+                        // 🔹 Datos del usuario
+                        Text(state.value.userName, style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            state.value.userHandle,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color(0xFF666666)
-                        )
-                        Text(
-                            state.value.userRole,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color(0xFF666666)
-                        )
+                        Text(state.value.userHandle, style = MaterialTheme.typography.labelMedium, color = Color(0xFF666666))
+                        Text(state.value.userRole, style = MaterialTheme.typography.labelMedium, color = Color(0xFF666666))
                         Spacer(modifier = Modifier.height(4.dp))
 
                         // 🔹 Ubicación actual
                         LocationBadge(isInCampus.value == true)
 
+                        // 🔹 Carrera / Major
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Major: ${state.value.major}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color(0xFF444444)
+                        )
+
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // 🔹 Botones de acción
+                        // 🔹 Botones
                         Button(
                             onClick = { onGoToEdit() },
-                            modifier = Modifier
-                                .fillMaxWidth(1f)
-                                .height(40.dp),
+                            modifier = Modifier.fillMaxWidth().height(40.dp),
                             shape = RoundedCornerShape(7.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE0E0E0))
                         ) {
-                            Text(
-                                "Edit Profile",
-                                color = Color(0xFF333333),
-                                style = MaterialTheme.typography.titleSmall
-                            )
+                            Text("Edit Profile", color = Color(0xFF333333), style = MaterialTheme.typography.titleSmall)
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Button(
                             onClick = { viewModel.onEvent(ProfileEvent.OnSalesClick) },
-                            modifier = Modifier
-                                .fillMaxWidth(1f)
-                                .height(40.dp),
+                            modifier = Modifier.fillMaxWidth().height(40.dp),
                             shape = RoundedCornerShape(7.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                         ) {
-                            Text(
-                                "Sales",
-                                color = Color.White,
-                                style = MaterialTheme.typography.titleSmall
-                            )
+                            Text("Sales", color = Color.White, style = MaterialTheme.typography.titleSmall)
                         }
 
                         Spacer(modifier = Modifier.height(48.dp))
 
-                        // 🔹 Lista de productos
+                        // 🔹 Productos del usuario
                         Column(modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                "My Products",
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.padding(bottom = 16.dp),
-                                color = Color(0xFF333333)
-                            )
-
+                            Text("My Products", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 16.dp))
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(2),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(max = 600.dp),
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 600.dp),
                                 contentPadding = PaddingValues(vertical = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 items(state.value.products) { product ->
-                                    ProductCard(
-                                        product = product,
-                                        onClick = { onProductClick(product.id) })
+                                    ProductCard(product = product, onClick = { onProductClick(product.id) })
                                 }
                             }
-
                         }
                     }
                 }
@@ -202,38 +168,24 @@ fun ProfileScreen(
         }
     }
 }
+
 @Composable
 fun ProductCard(product: Product, onClick: () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight(),
+        modifier = Modifier.fillMaxWidth().wrapContentHeight(),
         horizontalAlignment = Alignment.Start
     ) {
         AsyncImage(
             model = product.imageUrl,
             contentDescription = product.title,
             contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(8.dp))
-                .clickable { onClick() }
+            modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(8.dp)).clickable { onClick() }
         )
-
         Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = product.title,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Black,
-            modifier = Modifier.padding(horizontal = 4.dp)
-        )
-
+        Text(text = product.title, style = MaterialTheme.typography.bodySmall, color = Color.Black, modifier = Modifier.padding(horizontal = 4.dp))
     }
 }
 
-// 🔹 Reutilizas tu misma función auxiliar:
 @Composable
 fun LocationBadge(isInCampus: Boolean) {
     val text = if (isInCampus) "On Campus" else "Outside Campus"
@@ -242,22 +194,11 @@ fun LocationBadge(isInCampus: Boolean) {
     val icon = if (isInCampus) Icons.Filled.LocationOn else Icons.Filled.Public
 
     Row(
-        modifier = Modifier
-            .background(bgColor, shape = RoundedCornerShape(12.dp))
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier.background(bgColor, shape = RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = contentColor,
-            modifier = Modifier.size(18.dp)
-        )
+        Icon(imageVector = icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleSmall,
-            color = contentColor
-        )
+        Text(text = text, style = MaterialTheme.typography.titleSmall, color = contentColor)
     }
 }
