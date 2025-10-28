@@ -30,22 +30,10 @@ class ProfileViewModel @Inject constructor(
 
     fun onEvent(event: ProfileEvent) {
         when (event) {
-            is ProfileEvent.OnEditProfileClick -> {
-                println("Edit Profile Clicked")
-                // Aquí puedes emitir un efecto o navegar
-            }
-            is ProfileEvent.OnSalesClick -> {
-                println("Sales Clicked")
-                // Navegación a pantalla de ventas
-            }
-            is ProfileEvent.OnProductClick -> {
-//                println("Clicked product: ${event.productId}")
-//                // Navegación a detalle de producto
-            }
-            is ProfileEvent.LoadUser -> {
-                loadUserProfile()
-            }
-
+            is ProfileEvent.OnEditProfileClick -> println("Edit Profile Clicked")
+            is ProfileEvent.OnSalesClick -> println("Sales Clicked")
+            is ProfileEvent.OnProductClick -> { /* Navegación a detalle */ }
+            is ProfileEvent.LoadUser -> loadUserProfile()
         }
     }
 
@@ -62,7 +50,6 @@ class ProfileViewModel @Inject constructor(
 
             snapshot.documents.mapNotNull { doc ->
                 val data = doc.data ?: return@mapNotNull null
-
                 val images = data["images"] as? List<*> ?: emptyList<Any>()
                 val firstImage = images.firstOrNull() as? String ?: "https://picsum.photos/300/300"
 
@@ -82,6 +69,7 @@ class ProfileViewModel @Inject constructor(
             emptyList()
         }
     }
+
     private fun loadUserProfile() {
         viewModelScope.launch {
             try {
@@ -98,8 +86,8 @@ class ProfileViewModel @Inject constructor(
                 val name = userData["name"] as? String ?: user.displayName ?: "Unknown User"
                 val email = userData["email"] as? String ?: user.email ?: ""
                 val role = userData["role"] as? String ?: "Student"
+                val major = userData["major"] as? String ?: "Not specified" // 🎓 nuevo campo
 
-                // 🔹 Productos del usuario
                 val products = getUserProducts(uid)
 
                 _state.update {
@@ -108,6 +96,7 @@ class ProfileViewModel @Inject constructor(
                         userHandle = "@${email.substringBefore("@")}",
                         userRole = role,
                         email = email,
+                        major = major, // 🔹 agregado
                         products = products,
                         isLoading = false,
                         error = null
@@ -120,5 +109,4 @@ class ProfileViewModel @Inject constructor(
             }
         }
     }
-
 }

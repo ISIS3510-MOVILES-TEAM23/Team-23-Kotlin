@@ -5,12 +5,14 @@ data class ProfileState(
     val userHandle: String = "",
     val userRole: String = "",
     val email: String = "",
+    val major: String = "", // 🎓 nuevo campo
     val photoUrl: String? = null,
     val isInCampus: Boolean = false,
     val isLoading: Boolean = true,
     val error: String? = null,
     val products: List<Product> = emptyList()
 )
+
 data class Product(
     val id: String = "",
     val title: String = "",

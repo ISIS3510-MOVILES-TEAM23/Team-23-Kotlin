@@ -5,7 +5,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -24,19 +26,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.team_23_kotlin.R
 import com.example.team_23_kotlin.ui.theme.Montserrat
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Date
-import java.util.Locale
+import java.util.*
+
+val MAJORS = listOf(
+    "Administración", "Antropología", "Arquitectura", "Arte", "Biología",
+    "Ciencia Política", "Contaduría Internacional", "Derecho", "Diseño",
+    "Economía", "Educación Infantil", "Estudios Globales", "Física",
+    "Filosofía", "Geociencias", "Gobierno y Asuntos Públicos", "Historia",
+    "Historia del Arte", "Ingeniería Ambiental", "Ingeniería Biomédica",
+    "Ingeniería Civil", "Ingeniería de Alimentos", "Ingeniería de Sistemas y Computación",
+    "Ingeniería Eléctrica", "Ingeniería Electrónica", "Ingeniería Industrial",
+    "Ingeniería Mecánica", "Ingeniería Química", "Lenguas y Cultura",
+    "Literatura", "Matemáticas", "Medicina", "Microbiología", "Música",
+    "Narrativas Digitales", "Psicología", "Química", "Licenciatura en Artes",
+    "Licenciatura en Biología", "Licenciatura en Español y Filología",
+    "Licenciatura en Filosofía", "Licenciatura en Física", "Licenciatura en Historia",
+    "Licenciatura en Matemáticas", "Licenciatura en Química"
+)
 
 data class SignUpForm(
     val contact_preferences: String,
-    val created_at_local: String, // solo display; el server timestamp lo pones en backend
+    val created_at_local: String,
     val email: String,
     val is_verified: Boolean,
     val name: String,
     val password: String,
-    val role: String
+    val role: String,
+    val major: String
 )
 
 @Composable
@@ -50,7 +66,8 @@ fun SignUpScreen(
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isVerified by remember { mutableStateOf(false) }
     var role by remember { mutableStateOf("student") }
-    var contactPref by remember { mutableStateOf("push") }
+    var contactPref by remember { mutableStateOf("Push Notifications") }
+    var major by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
     val yellow = MaterialTheme.colorScheme.secondary
@@ -63,18 +80,17 @@ fun SignUpScreen(
         sdf.format(Date())
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(bg)
-            .padding(horizontal = 24.dp, vertical = 16.dp)
-    ) {
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = bg
+    ) { padding ->
         Column(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState()) // ✅ scroll
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(Modifier.height(30.dp))
 
@@ -101,14 +117,12 @@ fun SignUpScreen(
 
             Text(
                 text = "Create Account",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.ExtraBold
-                ),
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
                 fontSize = 35.sp,
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
 
             // ===== Name =====
             FieldLabel("Name")
@@ -118,14 +132,7 @@ fun SignUpScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 placeholder = { Text("Alice Example") },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = fieldBg,
-                    unfocusedContainerColor = fieldBg,
-                    disabledContainerColor = fieldBg,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                ),
-                shape = RoundedCornerShape(10.dp)
+                colors = textFieldColors(fieldBg)
             )
 
             Spacer(Modifier.height(14.dp))
@@ -138,14 +145,7 @@ fun SignUpScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 placeholder = { Text("you@uniandes.edu.co") },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = fieldBg,
-                    unfocusedContainerColor = fieldBg,
-                    disabledContainerColor = fieldBg,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                ),
-                shape = RoundedCornerShape(10.dp)
+                colors = textFieldColors(fieldBg)
             )
 
             Spacer(Modifier.height(14.dp))
@@ -158,43 +158,39 @@ fun SignUpScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 placeholder = { Text("••••••••") },
-                visualTransformation = if (isPasswordVisible) VisualTransformation.None
-                else PasswordVisualTransformation(),
+                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                         Icon(
-                            imageVector = if (isPasswordVisible) Icons.Filled.Visibility
-                            else Icons.Filled.VisibilityOff,
+                            imageVector = if (isPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                             contentDescription = "Toggle password"
                         )
                     }
                 },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = fieldBg,
-                    unfocusedContainerColor = fieldBg,
-                    disabledContainerColor = fieldBg,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                ),
-                shape = RoundedCornerShape(10.dp)
+                colors = textFieldColors(fieldBg)
             )
 
             Spacer(Modifier.height(14.dp))
 
+            // ===== Major =====
+            FieldLabel("Major")
+            MajorDropdown(selected = major, onSelect = { major = it }, containerColor = fieldBg)
 
+            Spacer(Modifier.height(14.dp))
 
+            // ===== Role =====
+            FieldLabel("Role")
+            RoleDropdown(selected = role, onSelect = { role = it }, containerColor = fieldBg)
 
-            // ===== Created at (solo display, no editable) =====
-            //Spacer(Modifier.height(4.dp))
-            /*
-            Text(
-                text = "Created at (local): $createdAtDisplay",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )*/
+            Spacer(Modifier.height(14.dp))
 
-            Spacer(Modifier.height(28.dp))
+            // ===== Contact Preference =====
+            FieldLabel("Contact Preference")
+            ContactPrefDropdown(selected = contactPref, onSelect = { contactPref = it }, containerColor = fieldBg)
 
+            Spacer(Modifier.height(32.dp))
+
+            // ===== Sign Up Button =====
             Button(
                 onClick = {
                     isLoading = true
@@ -206,20 +202,18 @@ fun SignUpScreen(
                             is_verified = isVerified,
                             name = name,
                             password = password,
-                            role = role
+                            role = role,
+                            major = major
                         )
                     )
                     isLoading = false
                 },
-                enabled = !isLoading,
+                enabled = !isLoading && major.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(65.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = black,
-                    contentColor = Color.White
-                )
+                colors = ButtonDefaults.buttonColors(containerColor = black, contentColor = Color.White)
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
@@ -230,93 +224,72 @@ fun SignUpScreen(
                 } else {
                     Text(
                         "Sign Up",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.ExtraBold
-                        ),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
                         fontSize = 30.sp
                     )
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(40.dp))
 
-        }
+            // ===== Footer =====
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "Already have an account?  ",
+                    fontSize = 15.sp,
+                    fontFamily = Montserrat,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    "Sign In",
+                    color = Color(0, 0, 255),
+                    fontFamily = Montserrat,
+                    fontWeight = FontWeight.W600,
+                    fontSize = 15.sp,
+                    modifier = Modifier.clickable { onGoToLogin() }
+                )
+            }
 
-        // Footer
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 5.dp),
-        ) {
-            Text(
-                "Already have an account?  ",
-                fontSize = 15.sp,
-                textAlign = TextAlign.Center,
-                fontFamily = Montserrat,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                "Sign In",
-                color = Color(0,0,255),
-                fontFamily = Montserrat,
-                fontWeight = FontWeight.W600,
-                fontSize = 15.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.clickable { onGoToLogin() }
-            )
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
 
 @Composable
 private fun FieldLabel(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.labelLarge,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 2.dp)
-    )
+    Text(text, style = MaterialTheme.typography.labelLarge, modifier = Modifier.fillMaxWidth())
     Spacer(Modifier.height(6.dp))
 }
 
+@Composable
+private fun textFieldColors(containerColor: Color) = TextFieldDefaults.colors(
+    focusedContainerColor = containerColor,
+    unfocusedContainerColor = containerColor,
+    disabledContainerColor = containerColor,
+    focusedIndicatorColor = Color.Transparent,
+    unfocusedIndicatorColor = Color.Transparent
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RoleDropdown(
-    selected: String,
-    onSelect: (String) -> Unit,
-    containerColor: Color
-) {
+fun MajorDropdown(selected: String, onSelect: (String) -> Unit, containerColor: Color) {
     var expanded by remember { mutableStateOf(false) }
-    val items = listOf("student") // deja solo student por ahora
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it }
-    ) {
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
         TextField(
             value = selected,
             onValueChange = {},
             readOnly = true,
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth(),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = containerColor,
-                unfocusedContainerColor = containerColor,
-                disabledContainerColor = containerColor,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
-            ),
-            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            placeholder = { Text("Selecciona tu carrera") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            placeholder = { Text("student") }
+            colors = textFieldColors(containerColor),
+            shape = RoundedCornerShape(10.dp)
         )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            items.forEach { item ->
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            MAJORS.forEach { item ->
                 DropdownMenuItem(
                     text = { Text(item) },
                     onClick = {
@@ -331,41 +304,54 @@ private fun RoleDropdown(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ContactPrefDropdown(
-    selected: String,
-    onSelect: (String) -> Unit,
-    containerColor: Color
-) {
+fun RoleDropdown(selected: String, onSelect: (String) -> Unit, containerColor: Color) {
+    val roles = listOf("student", "seller")
     var expanded by remember { mutableStateOf(false) }
-    val items = listOf("push")
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it }
-    ) {
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
         TextField(
             value = selected,
             onValueChange = {},
             readOnly = true,
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth(),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = containerColor,
-                unfocusedContainerColor = containerColor,
-                disabledContainerColor = containerColor,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
-            ),
-            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            placeholder = { Text("Select your role") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            placeholder = { Text("push") }
+            colors = textFieldColors(containerColor),
+            shape = RoundedCornerShape(10.dp)
         )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            items.forEach { item ->
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            roles.forEach { item ->
+                DropdownMenuItem(
+                    text = { Text(item.capitalize()) },
+                    onClick = {
+                        onSelect(item)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ContactPrefDropdown(selected: String, onSelect: (String) -> Unit, containerColor: Color) {
+    val prefs = listOf("Push Notifications", "Email")
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        TextField(
+            value = selected,
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            placeholder = { Text("Select your contact preference") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            colors = textFieldColors(containerColor),
+            shape = RoundedCornerShape(10.dp)
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            prefs.forEach { item ->
                 DropdownMenuItem(
                     text = { Text(item) },
                     onClick = {
