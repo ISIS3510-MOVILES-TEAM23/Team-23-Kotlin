@@ -1,6 +1,5 @@
 package com.example.team_23_kotlin.presentation.navegation
 
-import android.app.Application
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -11,7 +10,10 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -26,7 +28,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.team_23_kotlin.R
-import com.example.team_23_kotlin.presentation.auth.AuthScreen
 import com.example.team_23_kotlin.presentation.auth.LoginScreen
 import com.example.team_23_kotlin.presentation.editprofile.EditProfileScreen
 import com.example.team_23_kotlin.presentation.home.HomeScreen
@@ -41,18 +42,16 @@ import androidx.compose.ui.unit.sp
 import android.net.Uri
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
-import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.team_23_kotlin.presentation.chat.ChatScreen
 import com.example.team_23_kotlin.presentation.chatlist.ChatListScreen
 import com.example.team_23_kotlin.presentation.product.ProductScreen
 import com.example.team_23_kotlin.presentation.seller.SellerScreen
 import com.example.team_23_kotlin.presentation.shared.LocationViewModel
+import com.example.team_23_kotlin.presentation.shared.SessionViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.team_23_kotlin.presentation.auth.LoginAuthViewModel
 import com.example.team_23_kotlin.presentation.auth.SignUpAuthViewModel
@@ -134,11 +133,22 @@ fun AppNavHost() {
     val nav = rememberNavController()
 
     val locationViewModel: LocationViewModel = hiltViewModel()
+    val sessionViewModel: SessionViewModel = hiltViewModel()
+    val sessionState by sessionViewModel.state.collectAsState()
 
     val noBottomBarRoutes = setOf(Routes.LOGIN, Routes.SIGNUP,Routes.EDIT_PROFILE, Routes.CHAT, Routes.CONFIRMPURCHASE)
 
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+
+    LaunchedEffect(sessionState.user, sessionState.isLoading) {
+        if (!sessionState.isLoading && sessionState.user != null) {
+            nav.navigate(Routes.HOME) {
+                popUpTo(Routes.LOGIN) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -202,6 +212,7 @@ fun AppNavHost() {
                             password = password,
                             onSuccess = {
                                 setLoading(false)
+                                sessionViewModel.loadUser()
                                 // navega al Home y limpia el backstack de Login
                                 nav.navigate(Routes.HOME) {
                                     popUpTo(Routes.LOGIN) { inclusive = true }
