@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+import com.google.firebase.firestore.MetadataChanges
+
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
@@ -83,33 +85,40 @@ class ChatViewModel @Inject constructor(
             .document(chatId)
             .collection("messages")
             .orderBy("sent_at")
-            .addSnapshotListener { snapshot, e ->
+            // 🔹 Incluye metadata para recibir eventos locales y remotos
+            .addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, e ->
                 if (e != null) {
                     _state.value = _state.value.copy(error = "Error loading messages: ${e.message}")
                     return@addSnapshotListener
                 }
 
                 val messages = snapshot?.documents?.map { doc ->
+                    val senderId = doc.getString("sender_id") ?: ""
+                    val pending = doc.metadata.hasPendingWrites()
+                    val status = if (pending) MessageStatus.SENDING else MessageStatus.SENT
+
                     ChatMessage(
                         id = doc.id,
                         text = doc.getString("content") ?: "",
                         timestamp = doc.getTimestamp("sent_at")?.toDate()?.time ?: 0L,
-                        isMine = doc.getString("sender_id") == currentUid,
-                        senderName = if (doc.getString("sender_id") == currentUid)
-                            "You" else _state.value.header.peerName,
-                        senderAvatarUrl = if (doc.getString("sender_id") == currentUid)
-                            null else _state.value.header.peerAvatarUrl
+                        isMine = senderId == currentUid,
+                        senderName = if (senderId == currentUid) "You" else _state.value.header.peerName,
+                        senderAvatarUrl = if (senderId == currentUid) null else _state.value.header.peerAvatarUrl,
+                        deliveryStatus = status
                     )
                 } ?: emptyList()
 
-                _state.value = _state.value.copy(messages = messages, isLoading = false)
+                _state.value = _state.value.copy(messages = messages)
             }
     }
+
+
 
     // =====================================================
     // 🔹 Enviar mensaje
     // =====================================================
     fun sendMessage(chatId: String, message: String) {
+
         viewModelScope.launch {
             val user = auth.currentUser ?: return@launch
             val msgRef = firestore.collection("chats").document(chatId)
@@ -121,6 +130,7 @@ class ChatViewModel @Inject constructor(
                 "read" to false,
                 "sent_at" to Timestamp.now()
             )
+            _state.value = _state.value.copy(input = "", canSend = false)
 
             try {
                 msgRef.set(messageData).await()
@@ -132,7 +142,7 @@ class ChatViewModel @Inject constructor(
                     )
                 ).await()
 
-                _state.value = _state.value.copy(input = "", canSend = false)
+
 
             } catch (e: Exception) {
                 e.printStackTrace()

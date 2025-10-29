@@ -47,7 +47,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import android.net.Uri
 import android.util.Log
 import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.MapProperties
@@ -57,9 +57,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import androidx.compose.foundation.gestures.detectTransformGestures
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.*
+import com.example.team_23_kotlin.utils.isNetworkAvailable
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -324,6 +324,13 @@ fun PickupPointMapModal(
 
     val cameraPositionState = rememberCameraPositionState()
 
+    val isOnline = remember { mutableStateOf(isNetworkAvailable(context)) }
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { isNetworkAvailable(context) }
+            .collect { isOnline.value = it }
+    }
+
     // === Parsear coordenadas del destino ===
     LaunchedEffect(pickupCoords) {
         try {
@@ -416,65 +423,68 @@ fun PickupPointMapModal(
                     .fillMaxWidth()
                     .height(300.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color.LightGray)
+                    .background(Color(0xFFF0F0F0))
             ) {
-                if (destinationLatLng != null) {
-                    GoogleMap(
-                        modifier = Modifier.matchParentSize(),
-                        cameraPositionState = cameraPositionState,
-                        uiSettings = MapUiSettings(
-                            zoomControlsEnabled = false,
-                            zoomGesturesEnabled = true,
-                            scrollGesturesEnabled = true
-                        ),
-                        properties = MapProperties(isMyLocationEnabled = false)
-                    ) {
-                        // Marcadores
-                        currentLatLng?.let {
-                            Marker(state = MarkerState(it), title = "Tu ubicación")
-                        }
-                        destinationLatLng?.let {
-                            Marker(state = MarkerState(it), title = pickupName)
-                        }
-                        // Ruta
-                        if (routePoints.isNotEmpty()) {
-                            Polyline(
-                                points = routePoints,
-                                color = Color(0xFF1976D2),
-                                width = 8f
+                when {
+                    !isOnline.value -> {
+                        Column(
+                            modifier = Modifier.align(Alignment.Center),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_no_internet),
+                                contentDescription = "No internet",
+                                tint = Color.Gray,
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "No internet connection",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.Gray
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = "Map unavailable. Please reconnect.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
                             )
                         }
                     }
 
-                    // Botón pequeño “centrar” arriba a la derecha
-                    FloatingActionButton(
-                        onClick = {
-                            scope.launch {
-                                val bounds = LatLngBounds.builder()
-                                    .include(currentLatLng!!)
-                                    .include(destinationLatLng!!)
-                                    .build()
-                                cameraPositionState.animate(
-                                    CameraUpdateFactory.newLatLngBounds(bounds, 100)
-                                )
+                    destinationLatLng != null -> {
+                        GoogleMap(
+                            modifier = Modifier.matchParentSize(),
+                            cameraPositionState = cameraPositionState,
+                            uiSettings = MapUiSettings(
+                                zoomControlsEnabled = false,
+                                zoomGesturesEnabled = true,
+                                scrollGesturesEnabled = true
+                            ),
+                            properties = MapProperties(isMyLocationEnabled = false)
+                        ) {
+                            currentLatLng?.let {
+                                Marker(state = MarkerState(it), title = "Tu ubicación")
                             }
-                        },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .size(40.dp),
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ) {
-                        Icon(Icons.Default.MyLocation, contentDescription = "Centrar")
+                            destinationLatLng?.let {
+                                Marker(state = MarkerState(it), title = pickupName)
+                            }
+                            if (routePoints.isNotEmpty()) {
+                                Polyline(points = routePoints, color = Color(0xFF1976D2), width = 8f)
+                            }
+                        }
                     }
-                } else {
-                    Text(
-                        "Cargando mapa...",
-                        modifier = Modifier.align(Alignment.Center),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+
+                    else -> {
+                        Text(
+                            "Cargando mapa...",
+                            modifier = Modifier.align(Alignment.Center),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
+
 
             Spacer(Modifier.height(16.dp))
 
@@ -482,19 +492,23 @@ fun PickupPointMapModal(
             OutlinedButton(
                 onClick = {
                     destinationLatLng?.let { dest ->
-                        val uri = Uri.parse(
-                            "https://www.google.com/maps/dir/?api=1&destination=${dest.latitude},${dest.longitude}"
-                        )
+                        val uri = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=${dest.latitude},${dest.longitude}")
                         val intent = Intent(Intent.ACTION_VIEW, uri)
                         intent.setPackage("com.google.android.apps.maps")
                         context.startActivity(intent)
                     }
                 },
+                enabled = isOnline.value,
                 shape = RoundedCornerShape(10.dp),
-                border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp)
+                border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    disabledContainerColor = Color(0xFFE0E0E0),
+                    disabledContentColor = Color.Gray
+                )
             ) {
                 Text("Abrir en Google Maps")
             }
+
 
             Spacer(Modifier.height(10.dp))
 
