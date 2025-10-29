@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.team_23_kotlin.core.network.hasInternetConnection
 import com.example.team_23_kotlin.data.posts.CategoryEntity
 import com.example.team_23_kotlin.data.posts.FirestorePostsRepository
 import com.example.team_23_kotlin.data.posts.Post
@@ -300,12 +301,9 @@ class PostViewModel(
     // -----------------------------------------------------------
     private fun isOnline(context: Context): Boolean {
         return try {
-            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-            val network = cm.activeNetwork ?: return false
-            val capabilities = cm.getNetworkCapabilities(network) ?: return false
-            val hasInternet = capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            Log.d("SyncDraft", "🌐 Internet connectivity: $hasInternet")
-            hasInternet
+            val result = context.hasInternetConnection()
+            Log.d("SyncDraft", "🌐 Internet connectivity: $result")
+            result
         } catch (e: Exception) {
             Log.e("SyncDraft", "⚠️ Error checking connectivity: ${e.message}")
             false
