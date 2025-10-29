@@ -41,9 +41,11 @@ import com.example.team_23_kotlin.R
 import com.example.team_23_kotlin.data.repository.LocationRepositoryImpl
 import com.example.team_23_kotlin.domain.usecase.CheckInCampusUseCase
 import com.example.team_23_kotlin.core.ui.NetworkImage
+import com.example.team_23_kotlin.data.local.PostsCacheStorage
 import com.example.team_23_kotlin.data.posts.FirestorePostsRepository
 import com.example.team_23_kotlin.data.posts.PostEntity
 import com.example.team_23_kotlin.data.search.FirestoreSearchEventsRepository
+import com.example.team_23_kotlin.presentation.shared.rememberConnectivityStatus
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
@@ -96,7 +98,13 @@ fun HomeScreen(
     onItemClick: (String) -> Unit = {},
     onCategoryClick: (String, String) -> Unit = { _, _ -> },
 ) {
-    val postsRepo = remember { FirestorePostsRepository(FirebaseFirestore.getInstance()) }
+    val context = LocalContext.current
+    val postsRepo = remember(context.applicationContext) {
+        FirestorePostsRepository(
+            FirebaseFirestore.getInstance(),
+            PostsCacheStorage(context.applicationContext)
+        )
+    }
     val postsVm: HomePostsViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
@@ -104,8 +112,8 @@ fun HomeScreen(
         }
     })
     val postsState by postsVm.state.collectAsState()
-    val context = LocalContext.current
     val postVm: com.example.team_23_kotlin.presentation.post.PostViewModel = viewModel()
+    val snackbarHostState = remember { SnackbarHostState() }
     val viewModel: HomeViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             val repo = LocationRepositoryImpl(context)
@@ -114,6 +122,9 @@ fun HomeScreen(
             return HomeViewModel(useCase) as T
         }
     })
+
+    val isConnected by rememberConnectivityStatus()
+    var wasOffline by remember { mutableStateOf(false) }
 
     val isInCampus by viewModel.isInCampus.collectAsState()
 
@@ -127,6 +138,23 @@ fun HomeScreen(
     LaunchedEffect(popupState.favoriteCategory) {
         if (popupState.favoriteCategory != null) {
             showPopup = true
+        }
+    }
+
+    LaunchedEffect(isConnected) {
+        if (isConnected) {
+            if (wasOffline) {
+                snackbarHostState.showSnackbar(
+                    message = "Conexión restaurada. Buscando nuevas publicaciones..."
+                )
+                postsVm.refresh()
+                wasOffline = false
+            }
+        } else {
+            wasOffline = true
+            snackbarHostState.showSnackbar(
+                message = "Conexión perdida. Mostrando publicaciones guardadas."
+            )
         }
     }
 
@@ -162,6 +190,7 @@ fun HomeScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         contentWindowInsets = WindowInsets(0),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 scrollBehavior = scrollBehavior,
@@ -321,7 +350,6 @@ fun HomeScreen(
             item {
                 val recsVm: RecommendationsViewModel = viewModel(factory = object : ViewModelProvider.Factory {
                     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                        val postsRepo = FirestorePostsRepository(FirebaseFirestore.getInstance())
                         val searchRepo = FirestoreSearchEventsRepository(FirebaseFirestore.getInstance())
 
                         val userId = FirebaseAuth.getInstance().currentUser?.uid

@@ -2,6 +2,7 @@ package com.example.team_23_kotlin.data.posts
 
 import android.net.Uri
 import android.util.Log
+import com.example.team_23_kotlin.data.local.PostsCacheStorage
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentReference
@@ -15,6 +16,7 @@ import java.util.UUID
 
 class FirestorePostsRepository(
     private val db: FirebaseFirestore,
+    private val cache: PostsCacheStorage? = null,
     private val storage: FirebaseStorage = FirebaseStorage.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) : PostsRepository {
@@ -23,31 +25,37 @@ class FirestorePostsRepository(
     // Obtiene posts activos
     // -----------------------------------------------------------
     override suspend fun getActivePosts(limit: Int): List<PostEntity> {
-        val qs = db.collection("posts")
-            .whereEqualTo("status", "active")
-            .limit(limit.toLong())
-            .get()
-            .await()
+        return try {
+            val qs = db.collection("posts")
+                .whereEqualTo("status", "active")
+                .limit(limit.toLong())
+                .get()
+                .await()
 
-        return qs.documents.map { snap ->
-            val data = snap.data ?: emptyMap<String, Any?>()
-            val categoryRef = data["category_id"] as? DocumentReference
-            val categoryName = categoryRef?.get()?.await()?.getString("name") ?: "Unknown"
+            val posts = qs.documents.map { snap ->
+                val data = snap.data ?: emptyMap<String, Any?>()
+                val categoryRef = data["category_id"] as? DocumentReference
+                val categoryName = categoryRef?.get()?.await()?.getString("name") ?: "Unknown"
 
-            PostEntity(
-                id = snap.id,
-                title = data["title"] as? String ?: "",
-                description = data["description"] as? String ?: "",
-                price = (data["price"] as? Number)?.toLong() ?: 0L,
-                images = (data["images"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
-                userId = data["user_id"] as? String ?: "",
-                status = data["status"] as? String ?: "",
-                createdAt = (data["created_at"] as? Timestamp)?.toDate(),
-                categoryName = categoryName,
-                pickupName = data["pickup_point_name"] as? String ?: "",
-                pickupCoords = data["pickup_coordinates"] as? String ?: "",
+                PostEntity(
+                    id = snap.id,
+                    title = data["title"] as? String ?: "",
+                    description = data["description"] as? String ?: "",
+                    price = (data["price"] as? Number)?.toLong() ?: 0L,
+                    images = (data["images"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
+                    userId = data["user_id"] as? String ?: "",
+                    status = data["status"] as? String ?: "",
+                    createdAt = (data["created_at"] as? Timestamp)?.toDate(),
+                    categoryName = categoryName,
+                    pickupName = data["pickup_point_name"] as? String ?: "",
+                    pickupCoords = data["pickup_coordinates"] as? String ?: "",
 
-                )
+                    )
+            }
+            cache?.savePosts(CACHE_KEY_ACTIVE, posts)
+            posts
+        } catch (e: Exception) {
+            cache?.loadPosts(CACHE_KEY_ACTIVE)?.take(limit)?.takeIf { it.isNotEmpty() } ?: throw e
         }
     }
 
@@ -59,15 +67,21 @@ class FirestorePostsRepository(
             Date(System.currentTimeMillis() - 5 * 24 * 60 * 60 * 1000L)
         )
 
-        val qs = db.collection("posts")
-            .whereGreaterThanOrEqualTo("created_at", fiveDaysAgo)
-            .limit(limit.toLong())
-            .get()
-            .await()
+        return try {
+            val qs = db.collection("posts")
+                .whereGreaterThanOrEqualTo("created_at", fiveDaysAgo)
+                .limit(limit.toLong())
+                .get()
+                .await()
 
-        return qs.documents
-            .map { snap -> mapToEntity(snap) }
-            .sortedByDescending { it.createdAt }
+            val posts = qs.documents
+                .map { snap -> mapToEntity(snap) }
+                .sortedByDescending { it.createdAt }
+            cache?.savePosts(CACHE_KEY_NEW, posts)
+            posts
+        } catch (e: Exception) {
+            cache?.loadPosts(CACHE_KEY_NEW)?.take(limit)?.takeIf { it.isNotEmpty() } ?: throw e
+        }
     }
 
     // -----------------------------------------------------------
@@ -102,27 +116,33 @@ class FirestorePostsRepository(
     // Obtiene post por ID
     // -----------------------------------------------------------
     override suspend fun getPostById(id: String): PostEntity {
-        val snap = db.collection("posts").document(id).get().await()
-        if (!snap.exists()) error("Post not found")
-        val data = snap.data ?: emptyMap<String, Any?>()
+        return try {
+            val snap = db.collection("posts").document(id).get().await()
+            if (!snap.exists()) error("Post not found")
+            val data = snap.data ?: emptyMap<String, Any?>()
 
-        val categoryRef = data["category_id"] as? DocumentReference
-        val categoryName = categoryRef?.get()?.await()?.getString("name") ?: "Unknown"
+            val categoryRef = data["category_id"] as? DocumentReference
+            val categoryName = categoryRef?.get()?.await()?.getString("name") ?: "Unknown"
 
-        return PostEntity(
-            id = snap.id,
-            title = data["title"] as? String ?: "",
-            description = data["description"] as? String ?: "",
-            price = (data["price"] as? Number)?.toLong() ?: 0L,
-            images = (data["images"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
-            userId = data["user_id"] as? String ?: "",
-            status = data["status"] as? String ?: "",
-            createdAt = (data["created_at"] as? Timestamp)?.toDate(),
-            categoryName = categoryName,
-            pickupName = data["pickup_point_name"] as? String ?: "",
-            pickupCoords = data["pickup_coordinates"] as? String ?: "",
+            val post = PostEntity(
+                id = snap.id,
+                title = data["title"] as? String ?: "",
+                description = data["description"] as? String ?: "",
+                price = (data["price"] as? Number)?.toLong() ?: 0L,
+                images = (data["images"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
+                userId = data["user_id"] as? String ?: "",
+                status = data["status"] as? String ?: "",
+                createdAt = (data["created_at"] as? Timestamp)?.toDate(),
+                categoryName = categoryName,
+                pickupName = data["pickup_point_name"] as? String ?: "",
+                pickupCoords = data["pickup_coordinates"] as? String ?: "",
 
-            )
+                )
+            cache?.savePostDetail(post)
+            post
+        } catch (e: Exception) {
+            cache?.loadPostDetail(id) ?: throw e
+        }
     }
 
     // -----------------------------------------------------------
@@ -131,20 +151,38 @@ class FirestorePostsRepository(
     override suspend fun searchPosts(query: String, limit: Int): List<PostEntity> {
         if (query.isBlank()) return emptyList()
 
-        val qs = db.collection("posts")
-            .whereEqualTo("status", "active")
-            .get()
-            .await()
+        return try {
+            val qs = db.collection("posts")
+                .whereEqualTo("status", "active")
+                .get()
+                .await()
 
-        val lowerQuery = query.lowercase()
+            val lowerQuery = query.lowercase()
 
-        return qs.documents
-            .map { snap -> mapToEntity(snap) }
-            .filter { post ->
-                post.title.lowercase().contains(lowerQuery) ||
-                        post.description.lowercase().contains(lowerQuery)
-            }
-            .take(limit)
+            qs.documents
+                .map { snap -> mapToEntity(snap) }
+                .filter { post ->
+                    post.title.lowercase().contains(lowerQuery) ||
+                            post.description.lowercase().contains(lowerQuery)
+                }
+                .take(limit)
+        } catch (e: Exception) {
+            val cachedSources = listOfNotNull(
+                cache?.loadPosts(CACHE_KEY_ACTIVE),
+                cache?.loadPosts(CACHE_KEY_NEW)
+            ).flatten()
+
+            if (cachedSources.isEmpty()) throw e
+
+            val lowerQuery = query.lowercase()
+            cachedSources
+                .filter { post ->
+                    post.title.lowercase().contains(lowerQuery) ||
+                            post.description.lowercase().contains(lowerQuery)
+                }
+                .distinctBy { it.id }
+                .take(limit)
+        }
     }
 
     // -----------------------------------------------------------
@@ -154,10 +192,12 @@ class FirestorePostsRepository(
         return try {
             if (userId.isBlank()) return "Usuario desconocido"
             val doc = db.collection("users").document(userId).get().await()
-            doc.getString("name") ?: "Usuario desconocido"
+            val name = doc.getString("name") ?: "Usuario desconocido"
+            cache?.saveUserName(userId, name)
+            name
         } catch (e: Exception) {
             Log.e("FirestorePostsRepository", "⚠️ Error al obtener nombre de usuario", e)
-            "Usuario desconocido"
+            cache?.loadUserName(userId) ?: "Usuario desconocido"
         }
     }
 
@@ -262,3 +302,6 @@ data class CategoryEntity(
     val id: String,
     val name: String
 )
+
+private const val CACHE_KEY_ACTIVE = "cache_active_posts"
+private const val CACHE_KEY_NEW = "cache_new_posts"

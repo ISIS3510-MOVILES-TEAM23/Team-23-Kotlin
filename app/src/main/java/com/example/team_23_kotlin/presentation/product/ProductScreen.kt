@@ -30,6 +30,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.example.team_23_kotlin.data.local.PostsCacheStorage
 import com.example.team_23_kotlin.data.posts.FirestorePostsRepository
 import com.example.team_23_kotlin.data.posts.PostsRepository
 import com.example.team_23_kotlin.data.repository.AnalyticsRepositoryImpl
@@ -68,8 +69,14 @@ fun ProductScreen(
     onBack: () -> Unit,
     nav: NavController
 ) {
+    val context = LocalContext.current
     // Repositorios
-    val repo: PostsRepository = remember { FirestorePostsRepository(FirebaseFirestore.getInstance()) }
+    val repo: PostsRepository = remember(context.applicationContext) {
+        FirestorePostsRepository(
+            FirebaseFirestore.getInstance(),
+            PostsCacheStorage(context.applicationContext)
+        )
+    }
     val analytics: AnalyticsRepository = remember {
         AnalyticsRepositoryImpl(FirebaseAuth.getInstance(), FirebaseFirestore.getInstance())
     }
