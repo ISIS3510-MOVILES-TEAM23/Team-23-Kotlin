@@ -1,7 +1,6 @@
 // presentation/chatlist/ChatListScreen.kt
 package com.example.team_23_kotlin.presentation.chatlist
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,10 +21,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.team_23_kotlin.R
-import com.example.team_23_kotlin.presentation.editprofile.EditProfileScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,27 +71,60 @@ fun ChatListScreen(
                     }
                 }
                 else -> {
-                    DisableSelection {
-                        LazyColumn(
+                    if (state.chats.isEmpty()) {
+                        // 🩵 Estado vacío o sin conexión
+                        Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.background),
-                            contentPadding = PaddingValues(vertical = 8.dp)
+                                .background(MaterialTheme.colorScheme.background)
+                                .padding(horizontal = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            items(state.chats.size, key = { state.chats[it].id }) { idx ->
-                                val item = state.chats[idx]
-                                ChatRow(
-                                    data = item,
-                                    onClick = {
-                                        vm.onEvent(ChatListEvent.MarkAsRead(item.id))
-                                        onOpenChat(item.id)
-                                    }
-                                )
-                                Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_chat_placeholder),
+                                contentDescription = "No messages",
+                                modifier = Modifier.size(96.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = "No messages yet",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = "Your conversations will appear here once you start chatting.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    } else {
+                        DisableSelection {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.background),
+                                contentPadding = PaddingValues(vertical = 8.dp)
+                            ) {
+                                items(state.chats.size, key = { state.chats[it].id }) { idx ->
+                                    val item = state.chats[idx]
+                                    ChatRow(
+                                        data = item,
+                                        onClick = {
+                                            vm.onEvent(ChatListEvent.MarkAsRead(item.id))
+                                            onOpenChat(item.id)
+                                        }
+                                    )
+                                    Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+                                }
                             }
                         }
                     }
                 }
+
             }
         }
     }
@@ -198,8 +228,3 @@ private fun ChatRow(
     }
 }
 
-@Preview
-@Composable
-fun ChatListScreenPreview() {
-    ChatListScreen(onOpenChat = {})
-}

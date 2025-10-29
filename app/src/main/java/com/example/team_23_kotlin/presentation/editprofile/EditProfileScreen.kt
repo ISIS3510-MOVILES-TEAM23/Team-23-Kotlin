@@ -242,45 +242,51 @@ fun EditProfileScreen(
             // Save button
             Button(
                 onClick = { viewModel.onEvent(EditProfileEvent.OnSaveClicked) },
+                enabled = !state.isSaving,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (state.isSaving)
+                        Color.Gray.copy(alpha = 0.4f)
+                    else
+                        MaterialTheme.colorScheme.secondary
+                )
             ) {
                 Text("Save Changes", color = Color.White, style = MaterialTheme.typography.titleSmall)
             }
-            if (state.isSaving) {
-                CircularProgressIndicator(
-                    modifier = Modifier.padding(top = 12.dp),
-                    color = MaterialTheme.colorScheme.secondary
-                )
+
+            when {
+                state.isSaving -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.padding(top = 12.dp),
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+
+                state.error != null -> {
+                    Text(
+                        text = state.error ?: "Something went wrong.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                }
+
+                state.success -> {
+                    Text(
+                        text = "Profile updated successfully!",
+                        color = Color(0xFF2E7D32),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                }
             }
 
-            state.error?.let { error ->
-                Text(
-                    text = error,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
 
-            if (state.success) {
-                Text(
-                    text = "Profile updated successfully!",
-                    color = Color(0xFF2E7D32),
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
+        }
 
         }
     }
-}
 
-@Preview
-@Composable
-fun EditProfileScreenPreview() {
-    EditProfileScreen(onBack = {})
-}

@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.team_23_kotlin.presentation.shared.LocationViewModel
+import androidx.compose.ui.res.painterResource
+import com.example.team_23_kotlin.R
+
 
 @Composable
 fun ProfileScreen(
@@ -48,15 +51,35 @@ fun ProfileScreen(
 
             state.value.error != null -> {
                 Box(
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = state.value.error ?: "Error loading profile",
-                        color = MaterialTheme.colorScheme.error
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = state.value.error ?: "You’re offline. Connect to the internet.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(horizontal = 32.dp),
+                        )
+
+                        Spacer(Modifier.height(16.dp))
+
+                        Button(
+                            onClick = { viewModel.onEvent(ProfileEvent.LoadUser) },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Text("Retry", color = Color.White)
+                        }
+                    }
                 }
             }
+
+
 
             else -> {
                 Column(
@@ -172,19 +195,35 @@ fun ProfileScreen(
 @Composable
 fun ProductCard(product: Product, onClick: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight(),
         horizontalAlignment = Alignment.Start
     ) {
         AsyncImage(
             model = product.imageUrl,
             contentDescription = product.title,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(8.dp)).clickable { onClick() }
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { onClick() },
+            // 🔹 Placeholders para evitar pantallas vacías
+            placeholder = painterResource(id = R.drawable.ic_placeholder),
+            error = painterResource(id = R.drawable.ic_placeholder)
         )
+
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = product.title, style = MaterialTheme.typography.bodySmall, color = Color.Black, modifier = Modifier.padding(horizontal = 4.dp))
+        Text(
+            text = product.title,
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.Black,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
     }
 }
+
 
 @Composable
 fun LocationBadge(isInCampus: Boolean) {

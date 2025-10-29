@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+import com.google.firebase.firestore.Source
+
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
@@ -80,13 +82,15 @@ class ProfileViewModel @Inject constructor(
                 }
 
                 val uid = user.uid
+
+                // Intentar obtener el documento del servidor
                 val userDoc = firestore.collection("users").document(uid).get().await()
                 val userData = userDoc.data ?: emptyMap()
 
                 val name = userData["name"] as? String ?: user.displayName ?: "Unknown User"
                 val email = userData["email"] as? String ?: user.email ?: ""
                 val role = userData["role"] as? String ?: "Student"
-                val major = userData["major"] as? String ?: "Not specified" // 🎓 nuevo campo
+                val major = userData["major"] as? String ?: "Not specified"
 
                 val products = getUserProducts(uid)
 
@@ -96,7 +100,7 @@ class ProfileViewModel @Inject constructor(
                         userHandle = "@${email.substringBefore("@")}",
                         userRole = role,
                         email = email,
-                        major = major, // 🔹 agregado
+                        major = major,
                         products = products,
                         isLoading = false,
                         error = null
@@ -105,8 +109,15 @@ class ProfileViewModel @Inject constructor(
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                _state.update { it.copy(error = e.message ?: "Error loading profile", isLoading = false) }
+                val message = if (e.message?.contains("offline", ignoreCase = true) == true)
+                    "You’re offline. Connect to the internet to load your profile."
+                else
+                    "Error loading profile. Please try again."
+
+                _state.update { it.copy(error = message, isLoading = false) }
             }
         }
     }
+
+
 }

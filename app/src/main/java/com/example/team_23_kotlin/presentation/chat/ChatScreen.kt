@@ -18,11 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.team_23_kotlin.utils.isNetworkAvailable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,20 +95,82 @@ fun ChatScreen(
             }
         }
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(state.messages, key = { it.id }) { msg ->
-                    MessageRow(
-                        msg = msg,
-                        peerAvatarUrl = state.header.peerAvatarUrl
-                    )
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            when {
+                state.isLoading -> {
+                    CircularProgressIndicator(Modifier.align(Alignment.Center))
+                }
+
+                state.error != null -> {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Send,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "You're offline",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.Gray
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Connect to the internet to load your messages.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
+                    }
+                }
+
+                state.messages.isEmpty() -> {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Send,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "No messages yet",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Start chatting to see messages here.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
+                    }
+                }
+
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(state.messages, key = { it.id }) { msg ->
+                            MessageRow(msg = msg, peerAvatarUrl = state.header.peerAvatarUrl)
+                        }
+                    }
                 }
             }
         }
+
     }
 }
 
@@ -208,14 +272,22 @@ private fun MessageRow(msg: ChatMessage, peerAvatarUrl: String?) {
             ) {
                 Text(msg.text, style = MaterialTheme.typography.bodyMedium, color = textColor)
             }
-        }
 
-        if (msg.isMine) {
-            Spacer(Modifier.width(8.dp))
-            Avatar(null)
+            if (msg.isMine) {
+                Text(
+                    text = when (msg.deliveryStatus) {
+                        MessageStatus.SENDING -> "🕓 Sending…"
+                        MessageStatus.SENT -> "✔ Sent"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
         }
     }
 }
+
 
 @Composable
 private fun Avatar(avatarUrl: String?) {
