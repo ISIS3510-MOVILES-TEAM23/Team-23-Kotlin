@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.team_23_kotlin.R
 import com.example.team_23_kotlin.core.ui.NetworkImage
+import com.example.team_23_kotlin.data.local.PostsCacheStorage
 import com.example.team_23_kotlin.data.posts.FirestorePostsRepository
 import com.example.team_23_kotlin.data.posts.PostEntity
 import com.google.firebase.firestore.FirebaseFirestore
@@ -55,7 +57,13 @@ fun CategoriesScreen(
     )
 
     // 🔍 búsqueda rápida en Firestore
-    val repo = remember { FirestorePostsRepository(FirebaseFirestore.getInstance()) }
+    val context = LocalContext.current
+    val repo = remember(context.applicationContext) {
+        FirestorePostsRepository(
+            FirebaseFirestore.getInstance(),
+            PostsCacheStorage(context.applicationContext)
+        )
+    }
     var searchResults by remember { mutableStateOf<List<PostEntity>>(emptyList()) }
     val scope = rememberCoroutineScope()
 
