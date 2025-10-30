@@ -59,6 +59,7 @@ import com.example.team_23_kotlin.presentation.auth.SignUpScreen
 import com.example.team_23_kotlin.presentation.categories.CategoryFeedScreen
 import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseScreen
 import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseViewModel
+import com.example.team_23_kotlin.presentation.sales.SalesScreen
 
 
 /** ===================== Rutas ===================== **/
@@ -83,6 +84,7 @@ object Routes {
     const val CHATLIST = "chatlist"
     const val CONFIRMPURCHASE = "confirmpurchase/{chatId}"
     fun confirmPurchase(chatId: String) = "confirmpurchase/${Uri.encode(chatId)}"
+    const val SALES = "sales"
 }
 
 /** ===================== Bottom Destinations ===================== **/
@@ -140,7 +142,7 @@ fun AppNavHost(
 
     val noBottomBarRoutes = setOf(
         Routes.LOGIN, Routes.SIGNUP, Routes.EDIT_PROFILE,
-        Routes.CHAT, Routes.CONFIRMPURCHASE
+        Routes.CHAT, Routes.CONFIRMPURCHASE, Routes.SALES
     )
 
     val backStackEntry by nav.currentBackStackEntryAsState()
@@ -327,7 +329,8 @@ fun AppNavHost(
                     onGoToEdit = { nav.navigate(Routes.EDIT_PROFILE) },
                     onProductClick = { productId ->
                         nav.navigate("product/$productId")
-                    }
+                    },
+                    onGoToSales = { nav.navigate(Routes.SALES) }
                 )
             }
 
@@ -406,6 +409,12 @@ fun AppNavHost(
                         }
                     },
                     viewModel = hiltViewModel<ConfirmPurchaseViewModel>()
+                )
+            }
+
+            composable(Routes.SALES) {
+                SalesScreen(
+                    onBack = { nav.popBackStack() }
                 )
             }
         }

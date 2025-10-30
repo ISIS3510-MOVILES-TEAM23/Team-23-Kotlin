@@ -33,6 +33,7 @@ fun ProfileScreen(
     onGoToEdit: () -> Unit,
     locationViewModel: LocationViewModel,
     onProductClick: (String) -> Unit,
+    onGoToSales: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val state = viewModel.state.collectAsState()
@@ -160,7 +161,7 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Button(
-                            onClick = { viewModel.onEvent(ProfileEvent.OnSalesClick) },
+                            onClick = { onGoToSales() },
                             modifier = Modifier.fillMaxWidth().height(40.dp),
                             shape = RoundedCornerShape(7.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
