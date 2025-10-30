@@ -80,7 +80,8 @@ class PostViewModel(
 
             is PostEvent.PickupPointSelected -> {
                 _state.value = _state.value.copy(
-                    pickupPointName = e.name
+                    pickupPointName = e.name,
+                    pickupCoordinates = e.coordinates
                 )
             }
         }
@@ -193,6 +194,8 @@ class PostViewModel(
             return
         }
 
+
+
         viewModelScope.launch {
             try {
                 _state.value = s.copy(isSaving = true, errorMessage = null)
@@ -206,8 +209,12 @@ class PostViewModel(
                     description = s.description,
                     price = cleanPrice.toLong(),
                     category = FirebaseFirestore.getInstance()
-                        .document("/categories/${s.categoryId}")
+                        .document("/categories/${s.categoryId}"),
+                    category_name = s.categoryName ?: "",
+                    pickup_point_name = s.pickupPointName ?: "",
+                    pickup_coordinates = s.pickupCoordinates ?: "",
                 )
+
 
                 if (context == null || !isOnline(context)) {
                     // 🚫 No hay Internet → guardar borrador localmente
