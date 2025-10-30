@@ -30,7 +30,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.example.team_23_kotlin.core.network.hasInternetConnection
 import com.example.team_23_kotlin.data.local.PostsCacheStorage
+import com.example.team_23_kotlin.data.local.SharedPostsMemoryCache
 import com.example.team_23_kotlin.data.posts.FirestorePostsRepository
 import com.example.team_23_kotlin.data.posts.PostsRepository
 import com.example.team_23_kotlin.data.repository.AnalyticsRepositoryImpl
@@ -74,7 +76,9 @@ fun ProductScreen(
     val repo: PostsRepository = remember(context.applicationContext) {
         FirestorePostsRepository(
             FirebaseFirestore.getInstance(),
-            PostsCacheStorage(context.applicationContext)
+            PostsCacheStorage(context.applicationContext),
+            SharedPostsMemoryCache.instance,
+            isOnline = { context.hasInternetConnection() }
         )
     }
     val analytics: AnalyticsRepository = remember {
