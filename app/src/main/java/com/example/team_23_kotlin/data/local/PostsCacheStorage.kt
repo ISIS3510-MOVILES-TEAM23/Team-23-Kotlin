@@ -18,6 +18,7 @@ class PostsCacheStorage(context: Context) {
             val jsonArray = JSONArray()
             posts.forEach { post ->
                 jsonArray.put(post.toJson())
+                savePostDetailInternal(post)
             }
             prefs.edit()
                 .putString(key, jsonArray.toString())
@@ -46,10 +47,7 @@ class PostsCacheStorage(context: Context) {
 
     fun savePostDetail(post: PostEntity) {
         try {
-            prefs.edit()
-                .putString(detailKey(post.id), post.toJson().toString())
-                .putLong("${detailKey(post.id)}_updated_at", System.currentTimeMillis())
-                .apply()
+            savePostDetailInternal(post)
         } catch (e: Exception) {
             Log.e(TAG, "Error guardando detalle de post", e)
         }
@@ -68,10 +66,7 @@ class PostsCacheStorage(context: Context) {
 
     fun saveUserName(userId: String, name: String) {
         try {
-            prefs.edit()
-                .putString(userKey(userId), name)
-                .putLong("${userKey(userId)}_updated_at", System.currentTimeMillis())
-                .apply()
+            saveUserNameInternal(userId, name)
         } catch (e: Exception) {
             Log.e(TAG, "Error guardando nombre de usuario", e)
         }
@@ -132,6 +127,20 @@ class PostsCacheStorage(context: Context) {
             pickupName = optString("pickupName"),
             pickupCoords = optString("pickupCoords")
         )
+    }
+
+    private fun savePostDetailInternal(post: PostEntity) {
+        prefs.edit()
+            .putString(detailKey(post.id), post.toJson().toString())
+            .putLong("${detailKey(post.id)}_updated_at", System.currentTimeMillis())
+            .apply()
+    }
+
+    private fun saveUserNameInternal(userId: String, name: String) {
+        prefs.edit()
+            .putString(userKey(userId), name)
+            .putLong("${userKey(userId)}_updated_at", System.currentTimeMillis())
+            .apply()
     }
 
     private fun detailKey(id: String) = "detail_$id"
