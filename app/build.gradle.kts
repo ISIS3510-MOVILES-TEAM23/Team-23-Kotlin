@@ -48,6 +48,9 @@ android {
 }
 
 dependencies {
+
+    // Messaging
+    implementation("com.google.firebase:firebase-messaging:23.4.0")
     // --- Firebase BoM (gestiona versiones automáticamente) ---
     implementation(platform("com.google.firebase:firebase-bom:33.3.0"))
 

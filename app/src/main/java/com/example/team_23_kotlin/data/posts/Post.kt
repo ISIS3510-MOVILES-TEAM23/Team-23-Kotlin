@@ -5,16 +5,16 @@
     import com.google.firebase.firestore.DocumentReference
 
     data class Post(
-        val id: String = "",
         val title: String = "",
         val description: String = "",
         val price: Long = 0,
-        val images: List<String> = emptyList(),
-        val status: String = "",
-        val createdAt: Timestamp? = null,
         val category: DocumentReference? = null,
-        val userId: DocumentReference? = null,
-        val pickupName: String = "",
-        val pickupCoords: String? = ""
+        val category_name: String = "", // ✅ nombre de la categoría
+        val pickup_point_name: String = "", // ✅ nombre del punto
+        val pickup_coordinates: String = "", // ✅ coordenadas
+        val images: List<String> = emptyList(),
+        val user_id: String = "",
+        val created_at: String = "",
+        val status: String = "active"
     )
 

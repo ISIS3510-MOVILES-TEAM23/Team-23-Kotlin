@@ -5,12 +5,16 @@ import com.example.team_23_kotlin.presentation.home.HomePopupState
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.Date
+import com.google.firebase.messaging.FirebaseMessaging
+import android.util.Log
+
 
 class HomeViewModel(
     private val checkInCampusUseCase: CheckInCampusUseCase
@@ -53,9 +57,32 @@ class HomeViewModel(
                 val mostVisited = categoryCount.maxByOrNull { it.value }?.key
                 _popupState.value = HomePopupState(favoriteCategory = mostVisited)
 
+                if (mostVisited != null) {
+                    firestore.collection("users")
+                        .document(userId)
+                        .set(mapOf("favoriteCategory" to mostVisited), SetOptions.merge())
+                }
+
+                subscribeToFavoriteTopic(mostVisited)
+
+
+
             } catch (e: Exception) {
                 _popupState.value = HomePopupState(error = e.message)
             }
         }
+    }
+
+    private fun subscribeToFavoriteTopic(favoriteCategory: String?) {
+        val topic = favoriteCategory!!.lowercase()
+        FirebaseMessaging.getInstance()
+            .subscribeToTopic(topic)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d("FCM", "✅ Subscribed to topic: $topic")
+                } else {
+                    Log.e("FCM", "❌ Subscription failed", task.exception)
+                }
+            }
     }
 }

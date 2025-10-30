@@ -282,12 +282,12 @@ class FirestorePostsRepository(
             "price" to post.price,
             "images" to urls,
             "category_id" to post.category,
-            "category_name" to (post.category?.id ?: ""),
+            "category_name" to post.category_name,
             "status" to "active",
             "created_at" to Timestamp.now(),
             "user_id" to uid,
-            "pickup_point_name" to post.pickupName,
-            "pickup_coordinates" to post.pickupCoords
+            "pickup_point_name" to post.pickup_point_name,
+            "pickup_coordinates" to post.pickup_coordinates
         )
 
         newDoc.set(data).await()
