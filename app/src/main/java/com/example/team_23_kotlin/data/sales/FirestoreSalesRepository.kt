@@ -1,6 +1,8 @@
 package com.example.team_23_kotlin.data.sales
 
 import android.util.Log
+import com.example.team_23_kotlin.data.local.SalesCacheStorage
+import com.example.team_23_kotlin.data.local.SalesMemoryCache
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
@@ -12,7 +14,10 @@ import kotlinx.coroutines.tasks.await
  * Implementación del repositorio de ventas usando Firestore
  */
 class FirestoreSalesRepository(
-    private val db: FirebaseFirestore
+    private val db: FirebaseFirestore,
+    private val cache: SalesCacheStorage? = null,
+    private val memoryCache: SalesMemoryCache? = null,
+    private val isOnline: (() -> Boolean)? = null
 ) : SalesRepository {
 
     companion object {
@@ -23,6 +28,11 @@ class FirestoreSalesRepository(
     }
 
     override suspend fun getSalesBySeller(userId: String, limit: Int): List<SaleEntity> {
+        if (isOnline?.invoke() == false) {
+            memoryCache?.getSales(userId)?.take(limit)?.takeIf { it.isNotEmpty() }?.let { return it }
+            return cache?.loadSales(userId)?.take(limit) ?: emptyList()
+        }
+
         return try {
             Log.d(TAG, "Obteniendo ventas para el vendedor: $userId")
             
@@ -39,24 +49,38 @@ class FirestoreSalesRepository(
             }
 
             Log.d(TAG, "Se encontraron ${sales.size} ventas")
+            cache?.saveSales(userId, sales)
+            memoryCache?.putSales(userId, sales)
             sales
         } catch (e: Exception) {
             Log.e(TAG, "Error al obtener ventas", e)
-            emptyList()
+            memoryCache?.getSales(userId)?.take(limit)?.takeIf { it.isNotEmpty() }
+                ?: cache?.loadSales(userId)?.take(limit)
+                ?: emptyList()
         }
     }
 
     override suspend fun getSaleById(saleId: String): SaleEntity? {
+        if (isOnline?.invoke() == false) {
+            memoryCache?.getDetail(saleId)?.let { return it }
+            return cache?.loadSaleDetail(saleId)
+        }
+
         return try {
             val doc = db.collection(COLLECTION_SALES)
                 .document(saleId)
                 .get(Source.SERVER)
                 .await()
             
-            mapToSaleEntity(doc)
+            val sale = mapToSaleEntity(doc)
+            sale?.let {
+                cache?.saveSaleDetail(it)
+                memoryCache?.putDetail(it)
+            }
+            sale
         } catch (e: Exception) {
             Log.e(TAG, "Error al obtener venta por ID: $saleId", e)
-            null
+            memoryCache?.getDetail(saleId) ?: cache?.loadSaleDetail(saleId)
         }
     }
 
