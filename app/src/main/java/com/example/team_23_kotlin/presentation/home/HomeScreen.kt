@@ -54,6 +54,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.graphics.Color
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 
 // =====================
 // Historial de búsqueda (SharedPreferences con CSV)
@@ -190,6 +191,9 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
+
+
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -346,6 +350,20 @@ fun HomeScreen(
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
+                Button(
+                    onClick = {
+                        FirebaseCrashlytics.getInstance().log("🔥 Crash test triggered from HomeScreen")
+                        throw RuntimeException("Test crash from HomeScreen – verifying Crashlytics integration")
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Text("Simulate Crash", color = MaterialTheme.colorScheme.onErrorContainer)
+                }
             }
 
             val currentUser = FirebaseAuth.getInstance().currentUser
