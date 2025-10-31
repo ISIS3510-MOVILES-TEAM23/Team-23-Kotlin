@@ -1,6 +1,9 @@
 // presentation/auth/LoginAuthViewModel.kt
 package com.example.team_23_kotlin.presentation.auth
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,13 +11,16 @@ import com.example.team_23_kotlin.data.local.StoredUser
 import com.example.team_23_kotlin.data.local.UserSessionStorage
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+import com.google.firebase.FirebaseNetworkException
 
 @HiltViewModel
 class LoginAuthViewModel @Inject constructor(
     private val auth: FirebaseAuth,
+    @ApplicationContext private val context: Context,
     private val userSessionStorage: UserSessionStorage
 ) : ViewModel() {
 
@@ -33,6 +39,11 @@ class LoginAuthViewModel @Inject constructor(
         }
         if (password.isBlank()) {
             onError("Ingresa tu contraseña")
+            return
+        }
+
+        if (!hasValidInternet()) {
+            onError("Sin conexión a Internet. No es posible iniciar sesión por primera vez.")
             return
         }
 
@@ -62,10 +73,23 @@ class LoginAuthViewModel @Inject constructor(
 
                 onSuccess()
             } catch (ex: Exception) {
-                val msg = ex.message ?: "No se pudo iniciar sesión"
-                onError(mapFirebaseError(msg))
+                // Segundo filtro: si igual llegó a dispararse Firebase, unificamos el mensaje
+                val msg = when (ex) {
+                    is FirebaseNetworkException -> "Sin conexión a Internet. Intenta de nuevo cuando tengas señal."
+                    else -> mapFirebaseError(ex.message ?: "No se pudo iniciar sesión")
+                }
+                onError(msg)
             }
         }
+    }
+
+    private fun hasValidInternet(): Boolean {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val nw = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(nw) ?: return false
+        // INTERNET + VALIDATED asegura que hay salida real (no solo Wi-Fi sin Internet)
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
     private fun mapFirebaseError(raw: String): String = when {

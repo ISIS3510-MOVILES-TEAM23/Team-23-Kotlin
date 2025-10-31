@@ -28,6 +28,9 @@ import com.example.team_23_kotlin.R
 import com.example.team_23_kotlin.ui.theme.Montserrat
 import java.util.*
 
+// Hilt
+import androidx.hilt.navigation.compose.hiltViewModel
+
 val MAJORS = listOf(
     "Administración", "Antropología", "Arquitectura", "Arte", "Biología",
     "Ciencia Política", "Contaduría Internacional", "Derecho", "Diseño",
@@ -58,17 +61,21 @@ data class SignUpForm(
 @Composable
 fun SignUpScreen(
     onSubmit: (SignUpForm) -> Unit,
-    onGoToLogin: () -> Unit
+    onGoToLogin: () -> Unit,
+    vm: SignUpAuthViewModel = hiltViewModel(),
+    onSuccessNavigate: () -> Unit = {}
 ) {
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    val ui by vm.ui.collectAsState()
+
+    var name by remember { mutableStateOf(ui.draftName) }
+    var email by remember { mutableStateOf(ui.draftEmail) }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isVerified by remember { mutableStateOf(false) }
     var role by remember { mutableStateOf("student") }
     var contactPref by remember { mutableStateOf("Push Notifications") }
     var major by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) } // mantenemos tu firma previa
 
     val yellow = MaterialTheme.colorScheme.secondary
     val bg = MaterialTheme.colorScheme.background
@@ -80,6 +87,15 @@ fun SignUpScreen(
         sdf.format(Date())
     }
 
+    // Sincroniza loading local con el del VM
+    LaunchedEffect(ui.isLoading) { isLoading = ui.isLoading }
+
+    // Prefill si draft llega luego
+    LaunchedEffect(ui.draftEmail, ui.draftName) {
+        if (email.isBlank() && ui.draftEmail.isNotBlank()) email = ui.draftEmail
+        if (name.isBlank()  && ui.draftName.isNotBlank())  name  = ui.draftName
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = bg
@@ -88,7 +104,7 @@ fun SignUpScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState()) // ✅ scroll
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -122,13 +138,13 @@ fun SignUpScreen(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(12.dp))
 
             // ===== Name =====
             FieldLabel("Name")
             TextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = { name = it; vm.onDraftChange(name = it) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 placeholder = { Text("Alice Example") },
@@ -141,7 +157,7 @@ fun SignUpScreen(
             FieldLabel("Email")
             TextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = { email = it; vm.onDraftChange(email = it) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 placeholder = { Text("you@uniandes.edu.co") },
@@ -188,12 +204,22 @@ fun SignUpScreen(
             FieldLabel("Contact Preference")
             ContactPrefDropdown(selected = contactPref, onSelect = { contactPref = it }, containerColor = fieldBg)
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(16.dp))
+
+            // 🔴 Mensaje de error (solo aparece cuando el VM lo setea: click sin Internet u otros errores)
+            ui.error?.let {
+                Text(
+                    it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(8.dp))
+            }
 
             // ===== Sign Up Button =====
             Button(
                 onClick = {
-                    isLoading = true
+                    // onSubmit (si lo usas para analytics/logs)
                     onSubmit(
                         SignUpForm(
                             contact_preferences = contactPref,
@@ -206,14 +232,32 @@ fun SignUpScreen(
                             major = major
                         )
                     )
-                    isLoading = false
+                    // Registro real: si no hay Internet -> error inmediato y NO loading
+                    vm.register(
+                        form = SignUpForm(
+                            contact_preferences = contactPref,
+                            created_at_local = createdAtDisplay,
+                            email = email,
+                            is_verified = isVerified,
+                            name = name,
+                            password = password,
+                            role = role,
+                            major = major
+                        ),
+                        onSuccess = onSuccessNavigate,
+                        onError = { /* el mensaje ya se muestra arriba */ }
+                    )
                 },
+                // ✅ Nunca se desactiva por Internet; solo por loading (para evitar taps dobles)
                 enabled = !isLoading && major.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(65.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = black, contentColor = Color.White)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = black,
+                    contentColor = Color.White
+                )
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(
@@ -322,7 +366,7 @@ fun RoleDropdown(selected: String, onSelect: (String) -> Unit, containerColor: C
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             roles.forEach { item ->
                 DropdownMenuItem(
-                    text = { Text(item.capitalize()) },
+                    text = { Text(item.replaceFirstChar { ch -> ch.titlecase(Locale.getDefault()) }) },
                     onClick = {
                         onSelect(item)
                         expanded = false
