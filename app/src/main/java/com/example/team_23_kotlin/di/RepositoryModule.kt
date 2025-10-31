@@ -5,6 +5,12 @@ import com.example.team_23_kotlin.domain.repository.AnalyticsRepository
 import com.example.team_23_kotlin.data.repository.AnalyticsRepositoryImpl
 import com.example.team_23_kotlin.domain.repository.LocationRepository
 import com.example.team_23_kotlin.data.repository.LocationRepositoryImpl
+import com.example.team_23_kotlin.core.network.hasInternetConnection
+import com.example.team_23_kotlin.data.local.SalesCacheStorage
+import com.example.team_23_kotlin.data.local.SharedSalesMemoryCache
+import com.example.team_23_kotlin.data.sales.SalesRepository
+import com.example.team_23_kotlin.data.sales.FirestoreSalesRepository
+import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -32,6 +38,21 @@ abstract class RepositoryModule {
             @ApplicationContext context: Context
         ): LocationRepository {
             return LocationRepositoryImpl(context)
+        }
+
+        // 🔹 Provee SalesRepository
+        @Provides
+        @Singleton
+        fun provideSalesRepository(
+            firestore: FirebaseFirestore,
+            @ApplicationContext context: Context
+        ): SalesRepository {
+            return FirestoreSalesRepository(
+                firestore,
+                SalesCacheStorage(context),
+                SharedSalesMemoryCache.instance,
+                isOnline = { context.hasInternetConnection() }
+            )
         }
     }
 }

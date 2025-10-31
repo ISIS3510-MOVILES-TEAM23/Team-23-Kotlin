@@ -42,7 +42,9 @@ import com.example.team_23_kotlin.data.repository.LocationRepositoryImpl
 import com.example.team_23_kotlin.domain.usecase.CheckInCampusUseCase
 import com.example.team_23_kotlin.core.ui.NetworkImage
 import com.example.team_23_kotlin.data.local.PostsCacheStorage
+import com.example.team_23_kotlin.data.local.SharedPostsMemoryCache
 import com.example.team_23_kotlin.data.posts.FirestorePostsRepository
+import com.example.team_23_kotlin.core.network.hasInternetConnection
 import com.example.team_23_kotlin.data.posts.PostEntity
 import com.example.team_23_kotlin.data.search.FirestoreSearchEventsRepository
 import com.example.team_23_kotlin.presentation.shared.rememberConnectivityStatus
@@ -102,7 +104,9 @@ fun HomeScreen(
     val postsRepo = remember(context.applicationContext) {
         FirestorePostsRepository(
             FirebaseFirestore.getInstance(),
-            PostsCacheStorage(context.applicationContext)
+            PostsCacheStorage(context.applicationContext),
+            SharedPostsMemoryCache.instance,
+            isOnline = { context.hasInternetConnection() }
         )
     }
     val postsVm: HomePostsViewModel = viewModel(factory = object : ViewModelProvider.Factory {

@@ -18,6 +18,9 @@
 
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+
     <uses-feature
         android:name="android.hardware.camera.any"
         android:required="false" />
@@ -46,6 +49,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".notifications.MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+            </intent-filter>
+        </service>
+
 
         <provider
             android:name="androidx.core.content.FileProvider"

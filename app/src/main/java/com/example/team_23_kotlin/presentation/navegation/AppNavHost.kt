@@ -59,6 +59,7 @@ import com.example.team_23_kotlin.presentation.auth.SignUpScreen
 import com.example.team_23_kotlin.presentation.categories.CategoryFeedScreen
 import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseScreen
 import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseViewModel
+import com.example.team_23_kotlin.presentation.sales.SalesScreen
 
 
 /** ===================== Rutas ===================== **/
@@ -83,6 +84,7 @@ object Routes {
     const val CHATLIST = "chatlist"
     const val CONFIRMPURCHASE = "confirmpurchase/{chatId}"
     fun confirmPurchase(chatId: String) = "confirmpurchase/${Uri.encode(chatId)}"
+    const val SALES = "sales"
 }
 
 /** ===================== Bottom Destinations ===================== **/
@@ -129,18 +131,24 @@ private val bottomDestinations = listOf(
 
 /** ===================== AppNavHost con BottomBar ===================== **/
 @Composable
-fun AppNavHost() {
+fun AppNavHost(
+    startPostId: String? = null,
+    navController: NavHostController = rememberNavController()
+) {
     val nav = rememberNavController()
-
     val locationViewModel: LocationViewModel = hiltViewModel()
     val sessionViewModel: SessionViewModel = hiltViewModel()
     val sessionState by sessionViewModel.state.collectAsState()
 
-    val noBottomBarRoutes = setOf(Routes.LOGIN, Routes.SIGNUP,Routes.EDIT_PROFILE, Routes.CHAT, Routes.CONFIRMPURCHASE)
+    val noBottomBarRoutes = setOf(
+        Routes.LOGIN, Routes.SIGNUP, Routes.EDIT_PROFILE,
+        Routes.CHAT, Routes.CONFIRMPURCHASE, Routes.SALES
+    )
 
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
+    // ✅ 1. Redirigir al Home después del login
     LaunchedEffect(sessionState.user, sessionState.isLoading) {
         if (!sessionState.isLoading && sessionState.user != null) {
             nav.navigate(Routes.HOME) {
@@ -159,14 +167,24 @@ fun AppNavHost() {
     ) { innerPadding ->
         NavHost(
             navController = nav,
-            startDestination = Routes.LOGIN,
+            startDestination = Routes.LOGIN, // 👈 siempre empieza desde aquí
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Routes.HOME) {
+                // ✅ 2. Si la app fue abierta desde notificación, redirige a Product
+                LaunchedEffect(startPostId) {
+                    if (startPostId != null) {
+                        nav.navigate(Routes.product(startPostId)) {
+                            popUpTo(Routes.HOME)
+                            launchSingleTop = true
+                        }
+                    }
+                }
+
                 HomeScreen(
                     onGoToAuth = { nav.navigate(Routes.LOGIN) },
                     onItemClick = { productId ->
-                        nav.navigate("product/$productId")
+                        nav.navigate(Routes.product(productId))
                     },
                     onCategoryClick = { categoryId, categoryTitle ->
                         nav.navigate(Routes.categoryFeed(categoryId, categoryTitle))
@@ -213,12 +231,35 @@ fun AppNavHost() {
                             onSuccess = {
                                 setLoading(false)
                                 sessionViewModel.loadUser()
-                                // navega al Home y limpia el backstack de Login
+
+                                // ✅ Forzar registro del token FCM justo después del login
+                                com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+                                    .addOnSuccessListener { token ->
+                                        val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                        val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                                        if (userId != null) {
+                                            val updates = mapOf(
+                                                "fcmToken" to token,
+                                                "fcmTokenUpdatedAt" to com.google.firebase.Timestamp.now()
+                                            )
+                                            firestore.collection("users").document(userId)
+                                                .set(updates, com.google.firebase.firestore.SetOptions.merge())
+                                                .addOnSuccessListener {
+                                                    android.util.Log.d("FCM", "✅ Token saved after login for user $userId")
+                                                }
+                                                .addOnFailureListener { e ->
+                                                    android.util.Log.e("FCM", "❌ Failed to save token after login", e)
+                                                }
+                                        }
+                                    }
+
+                                // Luego navega al Home
                                 nav.navigate(Routes.HOME) {
                                     popUpTo(Routes.LOGIN) { inclusive = true }
                                     launchSingleTop = true
                                 }
-                            },
+                            }
+                            ,
                             onError = { msg ->
                                 setLoading(false)
                                 error = msg
@@ -288,7 +329,8 @@ fun AppNavHost() {
                     onGoToEdit = { nav.navigate(Routes.EDIT_PROFILE) },
                     onProductClick = { productId ->
                         nav.navigate("product/$productId")
-                    }
+                    },
+                    onGoToSales = { nav.navigate(Routes.SALES) }
                 )
             }
 
@@ -367,6 +409,12 @@ fun AppNavHost() {
                         }
                     },
                     viewModel = hiltViewModel<ConfirmPurchaseViewModel>()
+                )
+            }
+
+            composable(Routes.SALES) {
+                SalesScreen(
+                    onBack = { nav.popBackStack() }
                 )
             }
         }

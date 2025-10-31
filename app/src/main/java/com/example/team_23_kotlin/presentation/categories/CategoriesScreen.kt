@@ -27,7 +27,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.team_23_kotlin.R
+import com.example.team_23_kotlin.core.network.hasInternetConnection
 import com.example.team_23_kotlin.core.ui.NetworkImage
+import com.example.team_23_kotlin.data.local.SharedPostsMemoryCache
 import com.example.team_23_kotlin.data.local.PostsCacheStorage
 import com.example.team_23_kotlin.data.posts.FirestorePostsRepository
 import com.example.team_23_kotlin.data.posts.PostEntity
