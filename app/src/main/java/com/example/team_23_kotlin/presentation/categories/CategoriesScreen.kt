@@ -1,5 +1,6 @@
 package com.example.team_23_kotlin.presentation.categories
 
+import android.content.Intent
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -8,8 +9,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
@@ -46,24 +47,7 @@ fun CategoriesScreen(
 
     val state by viewModel.state.collectAsState()
 
-    val categories = listOf(
-        Triple("Furniture", "c2", R.drawable.ic_furniture),
-        Triple("Bikes", "c3", R.drawable.ic_bikes),
-        Triple("Books", "c1", R.drawable.ic_books),
-        Triple("Electronics", "c4", R.drawable.ic_electronics),
-        Triple("Clothes", "c5", R.drawable.ic_clothes),
-        Triple("Tickets", "c6", R.drawable.ic_electronics),
-        Triple("University Club", "c7", R.drawable.ic_uni)
-    )
-
-    // 🔍 búsqueda rápida en Firestore
-    val context = LocalContext.current
-    val repo = remember(context.applicationContext) {
-        FirestorePostsRepository(
-            FirebaseFirestore.getInstance(),
-            PostsCacheStorage(context.applicationContext)
-        )
-    }
+    val repo = remember { FirestorePostsRepository(FirebaseFirestore.getInstance()) }
     var searchResults by remember { mutableStateOf<List<PostEntity>>(emptyList()) }
     val scope = rememberCoroutineScope()
 
@@ -95,13 +79,13 @@ fun CategoriesScreen(
         ) {
             item {
                 val shape = RoundedCornerShape(14.dp)
-
                 TextField(
                     value = state.query,
                     onValueChange = {
                         viewModel.onEvent(CategoriesEvent.QueryChanged(it))
                         scope.launch {
-                            searchResults = repo.searchPosts(it, limit = 5)
+                            searchResults = if (it.isBlank()) emptyList()
+                            else repo.searchPosts(it, limit = 5)
                         }
                     },
                     placeholder = { Text("Search products", color = hint, style = ty.bodyMedium) },
@@ -166,32 +150,52 @@ fun CategoriesScreen(
                 item { Spacer(Modifier.height(20.dp)) }
             }
 
-            // 📂 lista de categorías
-            item {
-                Text("Categories", color = cs.onBackground, style = ty.titleLarge.copy(fontWeight = FontWeight.ExtraBold))
-                Spacer(Modifier.height(12.dp))
+            // ⏳ estado de carga / error (para el fetch de categorías)
+            if (state.isLoading && state.categories.isEmpty()) {
+                item { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
+            }
+            if (state.error != null && state.categories.isEmpty()) {
+                item {
+                    Text("Error: ${state.error}", color = cs.error, style = ty.bodyMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = { viewModel.load(force = true) }) { Text("Reintentar") }
+                    Spacer(Modifier.height(20.dp))
+                }
             }
 
-            items(categories) { (title, id, res) ->
-                CategoryCard(
-                    title = title,
-                    iconRes = res,
-                    onClick = {
-                        viewModel.onEvent(CategoriesEvent.CategoryClicked(title))
-                        onCategoryClick(id, title)
-                    }
-                )
-            }
+            // 📂 lista de categorías (desde Firestore + caché propia)
+            if (state.categories.isNotEmpty()) {
+                item {
+                    Text(
+                        "Categories",
+                        color = cs.onBackground,
+                        style = ty.titleLarge.copy(fontWeight = FontWeight.ExtraBold)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
 
-            item { Spacer(Modifier.height(8.dp)) }
+                items(state.categories) { cat ->
+                    CategoryCardLocalIcon(
+                        title = cat.name,
+                        iconName = cat.icon,
+                        onClick = {
+                            viewModel.onEvent(CategoriesEvent.CategoryClicked(cat.name))
+                            onCategoryClick(cat.id, cat.name)
+                        }
+                    )
+                }
+
+                item { Spacer(Modifier.height(8.dp)) }
+            }
         }
     }
 }
 
+/** Card para categoría con ícono en drawable local (resuelto por nombre). */
 @Composable
-private fun CategoryCard(
+private fun CategoryCardLocalIcon(
     title: String,
-    @DrawableRes iconRes: Int,
+    iconName: String,
     onClick: () -> Unit = {}
 ) {
     val cs = MaterialTheme.colorScheme
@@ -200,6 +204,12 @@ private fun CategoryCard(
     val minHeight = 96.dp
     val iconSize = 40.dp
     val horizPad = 22.dp
+
+    val context = LocalContext.current
+    val resId = remember(iconName) {
+        val id = context.resources.getIdentifier(iconName, "drawable", context.packageName)
+        if (id == 0) android.R.drawable.ic_menu_report_image else id
+    }
 
     Card(
         onClick = onClick,
@@ -212,34 +222,30 @@ private fun CategoryCard(
             .heightIn(min = minHeight)
             .shadow(10.dp, shape = shape, clip = false)
     ) {
-        Box(
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(minHeight),
-            contentAlignment = Alignment.CenterStart
+                .height(minHeight)
+                .padding(horizontal = horizPad)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = horizPad)
-            ) {
-                Image(
-                    painter = painterResource(iconRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(iconSize),
-                    contentScale = ContentScale.Fit
+            Image(
+                painter = painterResource(resId),
+                contentDescription = null,
+                modifier = Modifier.size(iconSize),
+                contentScale = ContentScale.Fit
+            )
+            Spacer(Modifier.width(18.dp))
+            Text(
+                text = title,
+                color = cs.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = ty.titleMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    platformStyle = PlatformTextStyle(includeFontPadding = false)
                 )
-                Spacer(Modifier.width(18.dp))
-                Text(
-                    text = title,
-                    color = cs.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = ty.titleMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        platformStyle = PlatformTextStyle(includeFontPadding = false)
-                    )
-                )
-            }
+            )
         }
     }
 }

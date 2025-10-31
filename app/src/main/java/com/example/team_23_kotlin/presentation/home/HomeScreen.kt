@@ -433,12 +433,12 @@ fun HomeScreen(
 
         // Tu lista local de categorías
         val categories = listOf(
-            Triple("Furniture", "c2", R.drawable.ic_furniture),
-            Triple("Bikes", "c3", R.drawable.ic_bikes),
-            Triple("Books", "c1", R.drawable.ic_books),
-            Triple("Electronics", "c4", R.drawable.ic_electronics),
-            Triple("Clothes", "c5", R.drawable.ic_clothes),
-            Triple("Tickets", "c6", R.drawable.ic_electronics),
+            Triple("Furniture", "c2", R.drawable.furniture),
+            Triple("Bikes", "c3", R.drawable.bikes),
+            Triple("Books", "c1", R.drawable.books),
+            Triple("Electronics", "c4", R.drawable.electronics),
+            Triple("Clothes", "c5", R.drawable.clothes),
+            Triple("Tickets", "c6", R.drawable.electronics),
             Triple("University Club", "c7", R.drawable.ic_uni)
         )
 

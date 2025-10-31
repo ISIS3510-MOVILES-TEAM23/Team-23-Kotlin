@@ -117,4 +117,10 @@ dependencies {
     // --- Google Maps Compose ---
     implementation("com.google.maps.android:maps-compose:4.4.1")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
+
+
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("com.google.code.gson:gson:2.10.1")
+
+
 }
