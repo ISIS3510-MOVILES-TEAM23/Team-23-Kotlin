@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.team_23_kotlin.data.sales.SaleEntity
+import com.example.team_23_kotlin.presentation.shared.rememberConnectivityStatus
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -37,8 +38,29 @@ fun SalesScreen(
     viewModel: SalesViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val isConnected by rememberConnectivityStatus()
+    var wasOffline by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isConnected) {
+        if (isConnected) {
+            if (wasOffline) {
+                snackbarHostState.showSnackbar(
+                    message = "Conexión restaurada. Buscando nuevas ventas..."
+                )
+                viewModel.onEvent(SalesEvent.OnRefresh)
+                wasOffline = false
+            }
+        } else {
+            wasOffline = true
+            snackbarHostState.showSnackbar(
+                message = "Conexión perdida. Mostrando ventas guardadas."
+            )
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
