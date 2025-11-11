@@ -10,7 +10,9 @@ data class ProfileState(
     val isInCampus: Boolean = false,
     val isLoading: Boolean = true,
     val error: String? = null,
-    val products: List<Product> = emptyList()
+    val products: List<Product> = emptyList(),
+    val drafts: List<Product> = emptyList(),
+    val toastMessage: String? = null
 )
 
 data class Product(
