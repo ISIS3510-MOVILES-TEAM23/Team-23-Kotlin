@@ -6,13 +6,13 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.team_23_kotlin.core.network.hasInternetConnection
-import com.example.team_23_kotlin.data.posts.CategoryEntity
 import com.example.team_23_kotlin.data.posts.FirestorePostsRepository
 import com.example.team_23_kotlin.data.posts.Post
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.File
 
@@ -29,95 +29,50 @@ class PostViewModel(
         loadCategories()
     }
 
-    // -----------------------------------------------------------
-    // Manejo de eventos provenientes de la UI
-    // -----------------------------------------------------------
     fun onEvent(e: PostEvent, context: Context? = null) {
         when (e) {
-            is PostEvent.TitleChanged ->
-                _state.value = _state.value.copy(title = e.value, errorMessage = null)
-
-            is PostEvent.DescriptionChanged ->
-                _state.value = _state.value.copy(description = e.value, errorMessage = null)
-
-            is PostEvent.PriceChanged ->
-                _state.value = _state.value.copy(price = e.value, errorMessage = null)
-
-            is PostEvent.CategorySelected ->
-                _state.value = _state.value.copy(
-                    categoryId = e.id,
-                    categoryName = e.name,
-                    errorMessage = null
-                )
-
-            PostEvent.ReloadCategories -> loadCategories()
-
+            is PostEvent.TitleChanged -> _state.value = _state.value.copy(title = e.value)
+            is PostEvent.DescriptionChanged -> _state.value = _state.value.copy(description = e.value)
+            is PostEvent.PriceChanged -> _state.value = _state.value.copy(price = e.value)
+            is PostEvent.CategorySelected -> _state.value =
+                _state.value.copy(categoryId = e.id, categoryName = e.name)
             is PostEvent.PhotoAdded -> {
-                val newList = _state.value.photoTokens.toMutableList().apply {
-                    add("uri:${e.uri}")
-                }
-                _state.value = _state.value.copy(photoTokens = newList)
+                val list = _state.value.photoTokens.toMutableList().apply { add("uri:${e.uri}") }
+                _state.value = _state.value.copy(photoTokens = list)
             }
-
             is PostEvent.PhotoRemovedAt -> {
-                val newList = _state.value.photoTokens.toMutableList().apply {
+                val list = _state.value.photoTokens.toMutableList().apply {
                     if (e.index in indices) removeAt(e.index)
                 }
-                _state.value = _state.value.copy(photoTokens = newList)
+                _state.value = _state.value.copy(photoTokens = list)
             }
-
-            PostEvent.AddPhotosClick -> { /* handled by UI */ }
-
-            PostEvent.SubmitClicked -> submitPost(context)
-
-            PostEvent.ClearForm -> {
-                _state.value = PostState(
-                    categories = _state.value.categories,
-                    categoryId = null,
-                    categoryName = null
-                )
-            }
-
-            is PostEvent.PickupPointSelected -> {
-                _state.value = _state.value.copy(
+            is PostEvent.PickupPointSelected -> _state.value =
+                _state.value.copy(
                     pickupPointName = e.name,
                     pickupCoordinates = e.coordinates
                 )
-            }
+            PostEvent.ReloadCategories -> loadCategories()
+            PostEvent.SubmitClicked -> submitPost(context)
+            PostEvent.ClearForm -> _state.value = PostState(categories = _state.value.categories)
+            PostEvent.AddPhotosClick -> TODO()
         }
     }
 
-    // -----------------------------------------------------------
-    // Cargar categorías desde Firestore
-    // -----------------------------------------------------------
     private fun loadCategories() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(categoriesLoading = true, categoriesError = null)
             try {
-                val list: List<CategoryEntity> = repository.getCategories()
-                val sorted = list.sortedBy { it.name }
-                val current = _state.value
-                val selectedStillExists = sorted.any { it.id == current.categoryId }
-
-                _state.value = current.copy(
-                    categories = sorted.map { Category(it.id, it.name) },
-                    categoriesLoading = false,
-                    categoriesError = null,
-                    categoryId = if (selectedStillExists) current.categoryId else null,
-                    categoryName = if (selectedStillExists) current.categoryName else null
-                )
+                val list = repository.getCategories().sortedBy { it.name }
+                _state.value = _state.value.copy(categories = list.map { Category(it.id, it.name) })
             } catch (t: Throwable) {
-                _state.value = _state.value.copy(
-                    categoriesLoading = false,
-                    categoriesError = t.message ?: "Error loading categories"
-                )
+                Log.e("Categories", "⚠️ ${t.message}")
             }
         }
     }
 
-    // -----------------------------------------------------------
-    // Guardar borrador local (Local Storage)
-    // -----------------------------------------------------------
+    // ---------------------- BORRADOR LOCAL ----------------------
+    // ------------------------------------------------------------
+    // ------------------LOCAL STORAGE: Local Files ---------------
+    // ------------------------------------------------------------
     private fun saveDraftLocally(context: Context) {
         try {
             val s = _state.value
@@ -127,193 +82,157 @@ class PostViewModel(
                 put("price", s.price)
                 put("categoryId", s.categoryId ?: "")
                 put("categoryName", s.categoryName ?: "")
+                put("pickupPointName", s.pickupPointName ?: "")
+                put("pickupCoordinates", s.pickupCoordinates ?: "")
                 put("photoTokens", s.photoTokens.joinToString(","))
             }
-            val file = File(context.applicationContext.filesDir, "draft_post.json")
+            val file = File(context.filesDir, "draft_post.json")
             file.writeText(json.toString())
             Log.d("LocalStorage", "✅ Draft saved at: ${file.absolutePath}")
         } catch (e: Exception) {
-            Log.e("LocalStorage", "⚠️ Error saving draft: ${e.message}")
+            Log.e("LocalStorage", "❌ Error saving draft: ${e.message}")
         }
     }
 
-    // -----------------------------------------------------------
-    // Leer borrador local
-    // -----------------------------------------------------------
-    fun loadDraft(context: Context) {
-        try {
-            val file = File(context.applicationContext.filesDir, "draft_post.json")
-            if (!file.exists()) return
-            val json = JSONObject(file.readText())
-
-            _state.value = _state.value.copy(
-                title = json.optString("title", ""),
-                description = json.optString("description", ""),
-                price = json.optString("price", ""),
-                categoryId = json.optString("categoryId", null),
-                categoryName = json.optString("categoryName", null),
-                photoTokens = json.optString("photoTokens", "")
-                    .split(",")
-                    .filter { it.isNotBlank() }
-            )
-        } catch (e: Exception) {
-            Log.e("LocalStorage", "⚠️ Error loading draft: ${e.message}")
-        }
-    }
-
-    // -----------------------------------------------------------
-    // Borrar borrador local
-    // -----------------------------------------------------------
     private fun clearDraft(context: Context) {
-        val file = File(context.applicationContext.filesDir, "draft_post.json")
-        if (file.exists()) {
-            file.delete()
-            Log.d("SyncDraft", "🗑️ Draft deleted successfully.")
-        }
+        val file = File(context.filesDir, "draft_post.json")
+        if (file.exists()) file.delete()
     }
 
-    // -----------------------------------------------------------
-    // Crear post o guardar borrador
-    // -----------------------------------------------------------
+    // ---------------------- CREAR POST ----------------------
+
     private fun submitPost(context: Context?) {
         val s = _state.value
 
-        if (s.title.isBlank()) {
-            _state.value = s.copy(errorMessage = "Please enter a title.")
+        if (s.title.isBlank() || s.categoryId == null || s.categoryName == null) {
+            _state.value = s.copy(errorMessage = "Please complete all fields.")
             return
         }
 
-        val cleanPrice = s.price.filter { it.isDigit() }
-        if (cleanPrice.isBlank() || cleanPrice.toLongOrNull() == null || cleanPrice.toLong() <= 0L) {
-            _state.value = s.copy(errorMessage = "Please enter a valid price.")
-            return
-        }
-
-        if (s.categoryId == null || s.categoryName == null) {
-            _state.value = s.copy(errorMessage = "Please select a category.")
-            return
-        }
-
-
-
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.Main) {
             try {
-                _state.value = s.copy(isSaving = true, errorMessage = null)
+                _state.value = s.copy(isSaving = true, errorMessage = null, uploadProgress = 0f)
 
-                val uris = s.photoTokens
+                val uris: List<Uri> = s.photoTokens
                     .filter { it.startsWith("uri:") }
                     .map { Uri.parse(it.removePrefix("uri:")) }
 
                 val post = Post(
                     title = s.title,
                     description = s.description,
-                    price = cleanPrice.toLong(),
+                    price = s.price.filter { it.isDigit() }.toLongOrNull() ?: 0L,
                     category = FirebaseFirestore.getInstance()
                         .document("/categories/${s.categoryId}"),
                     category_name = s.categoryName ?: "",
                     pickup_point_name = s.pickupPointName ?: "",
-                    pickup_coordinates = s.pickupCoordinates ?: "",
+                    pickup_coordinates = s.pickupCoordinates ?: ""
                 )
 
+                val hasInternet = context?.hasInternetConnection() == true
 
-                if (context == null || !isOnline(context)) {
-                    // 🚫 No hay Internet → guardar borrador localmente
+                if (!hasInternet) {
+                    // OFFLINE — guardar localmente
                     context?.let { saveDraftLocally(it) }
                     _state.value = s.copy(
                         isSaving = false,
-                        errorMessage = "No Internet — post saved locally!"
+                        postedOk = false,
+                        errorMessage = "📦 No connection — post saved locally!"
                     )
-                    Log.d("SyncDraft", "📦 Post saved locally due to no connection.")
+                    Log.d("SyncDraft", "📦 Draft saved locally.")
                     return@launch
                 }
 
-                // 🌐 Hay conexión → subir post
-                val success = repository.createPost(post, uris)
-                if (success) {
-                    context?.let { clearDraft(it) }
-                    _state.value = PostState(
-                        categories = s.categories,
-                        categoryId = s.categoryId,
-                        categoryName = s.categoryName,
-                        postedOk = true
-                    )
-                    Log.d("SyncDraft", "✅ Post uploaded to Firestore.")
-                } else {
-                    _state.value = s.copy(isSaving = false, errorMessage = "Error creating post.")
+                val uid = FirebaseAuth.getInstance().currentUser?.uid ?: "anonymous"
+
+                // ================================
+                // 🔹 Subida de imágenes en paralelo (IO)
+                // ================================
+                // ================================
+                // proper dispatchers (IO / Main) and async parallel execution.
+                // ================================
+                val uploadedUrls = if (uris.isNotEmpty()) {
+                    supervisorScope {
+                        val total = uris.size
+                        var completed = 0
+
+                        val jobs: List<Deferred<String?>> = uris.map { uri ->
+                            async(Dispatchers.IO) {
+                                val url = repository.uploadImage(uid, uri)
+
+                                withContext(Dispatchers.Main) {
+                                    completed++
+                                    val progress = completed.toFloat() / total
+                                    _state.value = _state.value.copy(uploadProgress = progress)
+                                }
+                                url
+                            }
+                        }
+
+                        jobs.awaitAll().filterNotNull()
+                    }
+                } else emptyList()
+
+                // ================================
+                // 🔹 Crear post final (IO)
+                // ================================
+                val success = withContext(Dispatchers.IO) {
+                    repository.createPost(post, uris)
                 }
 
-            } catch (t: Throwable) {
-                Log.e("SyncDraft", "❌ Error submitting post: ${t.message}", t)
-                _state.value = s.copy(isSaving = false, errorMessage = t.message)
-            }
-        }
-    }
-
-    // -----------------------------------------------------------
-    // 🌐 Sincronizar borrador (Eventual Connectivity)
-    // -----------------------------------------------------------
-    fun syncDraftIfNeeded(context: Context) {
-        viewModelScope.launch {
-            val file = File(context.applicationContext.filesDir, "draft_post.json")
-            Log.d("SyncDraft", "🔍 Checking for local draft at ${file.absolutePath}")
-
-            if (!file.exists()) {
-                Log.d("SyncDraft", "❌ No local draft found.")
-                return@launch
-            }
-
-            if (!isOnline(context)) {
-                Log.d("SyncDraft", "🚫 Still offline, will retry later.")
-                return@launch
-            }
-
-            try {
-                val json = JSONObject(file.readText())
-                val title = json.optString("title")
-                val description = json.optString("description")
-                val priceStr = json.optString("price").filter { it.isDigit() }
-                val price = priceStr.toLongOrNull() ?: 0L
-                val categoryId = json.optString("categoryId")
-                val photoTokensStr = json.optString("photoTokens", "")
-                val photoUris = photoTokensStr.split(",").filter { it.isNotBlank() }
-                    .map { Uri.parse(it.removePrefix("uri:")) }
-
-                Log.d("SyncDraft", "📤 Uploading saved post: $title ($price) → category=$categoryId")
-
-                val post = Post(
-                    title = title,
-                    description = description,
-                    price = price,
-                    category = FirebaseFirestore.getInstance()
-                        .document("/categories/$categoryId")
-                )
-
-                val success = repository.createPost(post, photoUris)
                 if (success) {
-                    clearDraft(context)
-                    Log.d("SyncDraft", "✅ Draft uploaded successfully and deleted.")
-                    _state.value = _state.value.copy(postedOk = true, errorMessage = null)
+                    context?.let { clearDraft(it) }
+                    _state.value = s.copy(
+                        isSaving = false,
+                        postedOk = true,
+                        uploadProgress = 1f,
+                        errorMessage = "✅ Post created with ${uploadedUrls.size} images!"
+                    )
+                    Log.d("SyncDraft", "✅ Post uploaded.")
                 } else {
-                    Log.e("SyncDraft", "⚠️ Firestore upload failed.")
+                    _state.value = s.copy(isSaving = false, errorMessage = "⚠️ Error creating post.")
                 }
 
             } catch (e: Exception) {
-                Log.e("SyncDraft", "❌ Error reading local draft: ${e.message}", e)
+                _state.value = s.copy(isSaving = false, errorMessage = e.message)
+                Log.e("SubmitPost", "❌ ${e.message}")
             }
         }
     }
 
-    // -----------------------------------------------------------
-    // 🔌 Verificar conexión con ConnectivityManager
-    // -----------------------------------------------------------
-    private fun isOnline(context: Context): Boolean {
-        return try {
-            val result = context.hasInternetConnection()
-            Log.d("SyncDraft", "🌐 Internet connectivity: $result")
-            result
-        } catch (e: Exception) {
-            Log.e("SyncDraft", "⚠️ Error checking connectivity: ${e.message}")
-            false
+    // ---------------------- EVENTUAL CONNECTIVITY ----------------------
+
+    fun syncDraftIfNeeded(context: Context) {
+        viewModelScope.launch {
+            val file = File(context.filesDir, "draft_post.json")
+            if (!file.exists()) return@launch
+            if (!context.hasInternetConnection()) return@launch
+
+            try {
+                val json = JSONObject(file.readText())
+                val uris = json.optString("photoTokens", "")
+                    .split(",").filter { it.isNotBlank() }
+                    .map { Uri.parse(it.removePrefix("uri:")) }
+
+                val post = Post(
+                    title = json.optString("title"),
+                    description = json.optString("description"),
+                    price = json.optString("price").filter { it.isDigit() }.toLongOrNull() ?: 0L,
+                    category = FirebaseFirestore.getInstance()
+                        .document("/categories/${json.optString("categoryId")}"),
+                    category_name = json.optString("categoryName"),
+                    pickup_point_name = json.optString("pickupPointName"),
+                    pickup_coordinates = json.optString("pickupCoordinates")
+                )
+
+                val success = repository.createPost(post, uris)
+                if (success) {
+                    clearDraft(context)
+                    _state.value = _state.value.copy(errorMessage = "✅ Draft uploaded successfully!")
+                    Log.d("SyncDraft", "✅ Draft uploaded and deleted.")
+                }
+            } catch (e: Exception) {
+                Log.e("SyncDraft", "❌ Error uploading draft: ${e.message}")
+            }
         }
     }
 }

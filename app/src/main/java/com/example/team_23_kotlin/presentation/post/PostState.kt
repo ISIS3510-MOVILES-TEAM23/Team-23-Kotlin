@@ -41,4 +41,10 @@ data class PostState(
     val pickupPointName: String? = null,
     val pickupCoordinates: String? = null,
 
-    )
+    val isDraftSaved: Boolean = false,
+    val draftId: String? = null,
+
+    // Nueva señal de navegación (real o draft)
+    val navigateToPostId: String? = null,
+    val uploadProgress: Float = 0f
+)

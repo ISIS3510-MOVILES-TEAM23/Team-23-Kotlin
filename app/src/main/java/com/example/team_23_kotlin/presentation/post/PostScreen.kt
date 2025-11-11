@@ -25,7 +25,6 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,7 +50,6 @@ import java.util.Locale
 import androidx.navigation.NavController
 import com.example.team_23_kotlin.presentation.navegation.Routes
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostScreen(
@@ -72,9 +70,7 @@ fun PostScreen(
 
     // Cámara
     var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
-    val takePicture = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicture()
-    ) { success ->
+    val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success) pendingPhotoUri?.let { uri -> vm.onEvent(PostEvent.PhotoAdded(uri)) }
         pendingPhotoUri = null
     }
@@ -93,22 +89,19 @@ fun PostScreen(
     // Galería
     val pickImages = rememberLauncherForActivityResult(
         ActivityResultContracts.GetMultipleContents()
-    ) { uris ->
-        if (!uris.isNullOrEmpty()) uris.forEach { vm.onEvent(PostEvent.PhotoAdded(it)) }
-    }
+    ) { uris -> if (!uris.isNullOrEmpty()) uris.forEach { vm.onEvent(PostEvent.PhotoAdded(it)) } }
 
-    // Sheet
     var showSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     fun openCamera() = requestCameraPermission.launch(Manifest.permission.CAMERA)
     fun openGallery() = pickImages.launch("image/*")
 
-    // Toasts VM
-    LaunchedEffect(s.errorMessage) { s.errorMessage?.let { scope.launch { snackbarHost.showSnackbar(it) } } }
-    LaunchedEffect(s.postedOk) {
+    // ✅ Mostrar mensaje y navegar tras éxito/error
+    LaunchedEffect(s.errorMessage) {
+        val msg = s.errorMessage ?: return@LaunchedEffect
+        snackbarHost.showSnackbar(msg)
         if (s.postedOk) {
-            scope.launch { snackbarHost.showSnackbar("Post created!") }
-            // ✅ ir al perfil (My Products) después de postear
+            kotlinx.coroutines.delay(800)
             navController.navigate(Routes.PROFILE) {
                 popUpTo(Routes.POST) { inclusive = true }
                 launchSingleTop = true
@@ -116,13 +109,16 @@ fun PostScreen(
         }
     }
 
-    // --- Detección de sacudida del dispositivo ---
+    // 🌐 Sincronización eventual
+    LaunchedEffect(Unit) { vm.syncDraftIfNeeded(ctx) }
+
+    // Shake-to-clear form
     val sensorManager = remember { ctx.getSystemService(android.content.Context.SENSOR_SERVICE) as android.hardware.SensorManager }
-    val shakeThreshold = 50f // sensibilidad de detección (puedes ajustar)
+    val shakeThreshold = 50f
     var lastShakeTime by remember { mutableStateOf(0L) }
 
     DisposableEffect(Unit) {
-        val sensorListener = object : android.hardware.SensorEventListener {
+        val listener = object : android.hardware.SensorEventListener {
             override fun onSensorChanged(event: android.hardware.SensorEvent?) {
                 event?.let {
                     val x = it.values[0]
@@ -130,36 +126,24 @@ fun PostScreen(
                     val z = it.values[2]
                     val acceleration = kotlin.math.sqrt((x * x + y * y + z * z).toDouble()).toFloat() - 9.8f
                     val currentTime = System.currentTimeMillis()
-
-                    // Evitar múltiples disparos seguidos
                     if (acceleration > shakeThreshold && currentTime - lastShakeTime > 1500) {
                         lastShakeTime = currentTime
                         vm.onEvent(PostEvent.ClearForm)
-                        scope.launch {
-                            snackbarHost.showSnackbar("Formulario limpiado ✨")
-                        }
+                        scope.launch { snackbarHost.showSnackbar("Formulario limpiado ✨") }
                     }
                 }
             }
-
             override fun onAccuracyChanged(sensor: android.hardware.Sensor?, accuracy: Int) {}
         }
-
         val accelerometer = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER)
-        sensorManager.registerListener(sensorListener, accelerometer, android.hardware.SensorManager.SENSOR_DELAY_UI)
-
-        onDispose {
-            sensorManager.unregisterListener(sensorListener)
-        }
+        sensorManager.registerListener(listener, accelerometer, android.hardware.SensorManager.SENSOR_DELAY_UI)
+        onDispose { sensorManager.unregisterListener(listener) }
     }
-
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = {
-                    Text("Post", color = cs.onPrimary, style = ty.titleLarge.copy(fontWeight = FontWeight.Bold))
-                },
+                title = { Text("Post", color = cs.onPrimary, style = ty.titleLarge.copy(fontWeight = FontWeight.Bold)) },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = cs.primary)
             )
         },
@@ -174,7 +158,6 @@ fun PostScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
             AddPhotosTile(onClick = { showSheet = true }, hairline = hairline, hint = hint)
-
             Spacer(Modifier.height(12.dp))
 
             val minSlots = 3
@@ -183,15 +166,13 @@ fun PostScreen(
             LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 itemsIndexed(s.photoTokens) { index, token ->
                     if (token.startsWith("uri:")) {
-                        ThumbRemote(
-                            uri = Uri.parse(token.removePrefix("uri:")),
-                            onRemove = { vm.onEvent(PostEvent.PhotoRemovedAt(index)) }
-                        )
+                        ThumbRemote(uri = Uri.parse(token.removePrefix("uri:"))) {
+                            vm.onEvent(PostEvent.PhotoRemovedAt(index))
+                        }
                     } else {
-                        ThumbLocal(
-                            imageRes = R.drawable.ic_playstation,
-                            onRemove = { vm.onEvent(PostEvent.PhotoRemovedAt(index)) }
-                        )
+                        ThumbLocal(imageRes = R.drawable.ic_playstation) {
+                            vm.onEvent(PostEvent.PhotoRemovedAt(index))
+                        }
                     }
                 }
                 items(placeholders) {
@@ -242,7 +223,6 @@ fun PostScreen(
             )
 
             Text("Do not share contact details", color = hint, style = ty.bodySmall, modifier = Modifier.padding(top = 6.dp, start = 4.dp))
-
             Spacer(Modifier.height(14.dp))
 
             FieldLabel("Price")
@@ -260,20 +240,48 @@ fun PostScreen(
 
             Spacer(Modifier.height(14.dp))
 
-
-
             FieldLabel("Punto de recogida")
             PickupPointDropdown(
                 pickupPoints = pickupPoints,
                 selectedName = s.pickupPointName,
-                onSelect = { point ->
-                    vm.onEvent(PostEvent.PickupPointSelected(point.name, point.coordinates))
-                },
+                onSelect = { point -> vm.onEvent(PostEvent.PickupPointSelected(point.name, point.coordinates)) },
                 hairline = hairline,
                 hint = hint
             )
 
             Spacer(Modifier.height(24.dp))
+
+            // ✅ Nuevo bloque: progreso de subida de imágenes
+            if (s.isSaving) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (s.uploadProgress in 0f..0.99f) {
+                        LinearProgressIndicator(
+                            progress = { s.uploadProgress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = s.errorMessage ?: "Subiendo...",
+                            style = ty.bodySmall,
+                            color = cs.primary
+                        )
+                    } else if (s.uploadProgress >= 1f) {
+                        Text(
+                            text = "✅ Imágenes subidas correctamente",
+                            style = ty.bodySmall,
+                            color = cs.secondary
+                        )
+                    }
+                }
+            }
 
             Button(
                 onClick = { vm.onEvent(PostEvent.SubmitClicked, ctx) },
@@ -286,7 +294,9 @@ fun PostScreen(
                     disabledContentColor = cs.onSecondary.copy(alpha = 0.7f)
                 ),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-                modifier = Modifier.fillMaxWidth().height(56.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
             ) {
                 if (s.isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = cs.onSecondary)
@@ -308,7 +318,9 @@ fun PostScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(onClick = { showSheet = false; openCamera() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-                    Icon(Icons.Filled.CameraAlt, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Use camera")
+                    Icon(Icons.Filled.CameraAlt, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Use camera")
                 }
                 OutlinedButton(onClick = { showSheet = false; openGallery() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
                     Text("Choose from gallery")
@@ -319,7 +331,7 @@ fun PostScreen(
     }
 }
 
-/* ---------- Dropdown de categorías (lee del VM) ---------- */
+/* ---------- Dropdown de categorías ---------- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoryDropdown(
@@ -340,8 +352,7 @@ private fun CategoryDropdown(
     val labelText = selectedName ?: if (loading) "Loading…" else error ?: "Select a category"
 
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = {
-        if (!loading) expanded = !expanded
-        else expanded = false
+        expanded = if (!loading) !expanded else false
     }) {
         TextField(
             value = labelText,
@@ -384,22 +395,13 @@ private fun CategoryDropdown(
 
         ExposedDropdownMenu(expanded = expanded && error == null, onDismissRequest = { expanded = false }) {
             if (categories.isEmpty() && !loading) {
-                DropdownMenuItem(
-                    text = { Text("No categories") },
-                    onClick = { expanded = false }
-                )
-                DropdownMenuItem(
-                    text = { Text("Retry") },
-                    onClick = { expanded = false; onRetry() }
-                )
+                DropdownMenuItem(text = { Text("No categories") }, onClick = { expanded = false })
+                DropdownMenuItem(text = { Text("Retry") }, onClick = { expanded = false; onRetry() })
             } else {
                 categories.forEach { cat ->
                     DropdownMenuItem(
                         text = { Text(cat.name) },
-                        onClick = {
-                            onSelect(cat)
-                            expanded = false
-                        }
+                        onClick = { onSelect(cat); expanded = false }
                     )
                 }
             }
@@ -420,13 +422,9 @@ private fun PickupPointDropdown(
     val ty = MaterialTheme.typography
     val shape = RoundedCornerShape(16.dp)
     var expanded by remember { mutableStateOf(false) }
-
     val labelText = selectedName ?: "Selecciona un punto de recogida"
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded }
-    ) {
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
         TextField(
             value = labelText,
             onValueChange = {},
@@ -439,9 +437,7 @@ private fun PickupPointDropdown(
                 .fillMaxWidth()
                 .heightIn(min = 56.dp)
                 .border(1.dp, hairline, shape),
-            placeholder = {
-                Text("Selecciona un punto de recogida", color = hint, style = ty.bodyMedium)
-            },
+            placeholder = { Text("Selecciona un punto de recogida", color = hint, style = ty.bodyMedium) },
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = cs.surface,
                 unfocusedContainerColor = cs.surface,
@@ -457,25 +453,15 @@ private fun PickupPointDropdown(
             )
         )
 
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             pickupPoints.forEach { point ->
-                DropdownMenuItem(
-                    text = { Text(point.name) },
-                    onClick = {
-                        onSelect(point)
-                        expanded = false
-                    }
-                )
+                DropdownMenuItem(text = { Text(point.name) }, onClick = { onSelect(point); expanded = false })
             }
         }
     }
 }
 
-
-/* ---------- Helpers y Sub-composables (sin cambios visuales) ---------- */
+/* ---------- Helpers y sub-composables ---------- */
 
 private fun createTempImageUri(context: android.content.Context): Uri {
     val imagesDir = File(context.cacheDir, "images").apply { mkdirs() }
@@ -485,8 +471,12 @@ private fun createTempImageUri(context: android.content.Context): Uri {
 }
 
 @Composable private fun FieldLabel(text: String) {
-    Text(text = text, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-        color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -505,7 +495,7 @@ private fun RoundedTextField(
     hairline: androidx.compose.ui.graphics.Color,
     hint: androidx.compose.ui.graphics.Color,
     imeAction: ImeAction = ImeAction.Done,
-    onIme: () -> Unit = {}                 // <-- quitar @Composable aquí
+    onIme: () -> Unit = {}
 ) {
     val cs = MaterialTheme.colorScheme
     val ty = MaterialTheme.typography
@@ -553,15 +543,25 @@ private fun RoundedTextField(
     )
 }
 
-
 @Composable
 private fun AddPhotosTile(onClick: () -> Unit, hairline: androidx.compose.ui.graphics.Color, hint: androidx.compose.ui.graphics.Color) {
     val cs = MaterialTheme.colorScheme; val ty = MaterialTheme.typography
     val shape = RoundedCornerShape(18.dp)
-    Box(Modifier.fillMaxWidth().height(160.dp).border(1.dp, hairline, shape).background(cs.surface, shape).clickable { onClick() }.padding(20.dp)) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(160.dp)
+            .border(1.dp, hairline, shape)
+            .background(cs.surface, shape)
+            .clickable { onClick() }
+            .padding(20.dp)
+    ) {
         Row(Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Add more\nphotos", color = hint, style = ty.headlineSmall.copy(
-                fontWeight = FontWeight.SemiBold, platformStyle = PlatformTextStyle(includeFontPadding = false)))
+            Text(
+                "Add more\nphotos",
+                color = hint,
+                style = ty.headlineSmall.copy(fontWeight = FontWeight.SemiBold, platformStyle = PlatformTextStyle(includeFontPadding = false))
+            )
             Spacer(Modifier.weight(1f))
             Icon(Icons.Filled.CameraAlt, contentDescription = "Camera", tint = cs.onSurface, modifier = Modifier.size(56.dp))
         }
@@ -571,8 +571,15 @@ private fun AddPhotosTile(onClick: () -> Unit, hairline: androidx.compose.ui.gra
 @Composable
 private fun PlaceholderThumb(onClick: () -> Unit, hint: androidx.compose.ui.graphics.Color, hairline: androidx.compose.ui.graphics.Color) {
     val shape = RoundedCornerShape(14.dp); val bg = MaterialTheme.colorScheme.surface
-    Box(Modifier.size(140.dp, 120.dp).border(1.dp, hairline, shape).clip(shape).background(bg).clickable { onClick() },
-        contentAlignment = Alignment.Center) {
+    Box(
+        Modifier
+            .size(140.dp, 120.dp)
+            .border(1.dp, hairline, shape)
+            .clip(shape)
+            .background(bg)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
         Icon(Icons.Filled.CameraAlt, contentDescription = "Add photo", tint = hint, modifier = Modifier.size(36.dp))
     }
 }
@@ -582,10 +589,24 @@ private fun ThumbLocal(@DrawableRes imageRes: Int, onRemove: () -> Unit) {
     val shape = RoundedCornerShape(14.dp); val bg = MaterialTheme.colorScheme.surface
     val hairline = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
     val chipBg = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-    Box(Modifier.size(140.dp, 120.dp).border(1.dp, hairline, shape).clip(shape).background(bg)) {
+    Box(
+        Modifier
+            .size(140.dp, 120.dp)
+            .border(1.dp, hairline, shape)
+            .clip(shape)
+            .background(bg)
+    ) {
         Image(painter = painterResource(imageRes), contentDescription = null, modifier = Modifier.matchParentSize(), contentScale = ContentScale.Crop)
-        Box(Modifier.padding(6.dp).size(26.dp).align(Alignment.TopEnd).clip(CircleShape).background(chipBg).clickable { onRemove() },
-            contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Close, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurface) }
+        Box(
+            Modifier
+                .padding(6.dp)
+                .size(26.dp)
+                .align(Alignment.TopEnd)
+                .clip(CircleShape)
+                .background(chipBg)
+                .clickable { onRemove() },
+            contentAlignment = Alignment.Center
+        ) { Icon(Icons.Outlined.Close, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurface) }
     }
 }
 
@@ -595,11 +616,25 @@ private fun ThumbRemote(uri: Uri, onRemove: () -> Unit) {
     val hairline = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
     val chipBg = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
     val context = LocalContext.current
-    Box(Modifier.size(140.dp, 120.dp).border(1.dp, hairline, shape).clip(shape).background(bg)) {
+    Box(
+        Modifier
+            .size(140.dp, 120.dp)
+            .border(1.dp, hairline, shape)
+            .clip(shape)
+            .background(bg)
+    ) {
         AsyncImage(model = ImageRequest.Builder(context).data(uri).crossfade(true).build(),
             contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
-        Box(Modifier.padding(6.dp).size(26.dp).align(Alignment.TopEnd).clip(CircleShape).background(chipBg).clickable { onRemove() },
-            contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Close, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurface) }
+        Box(
+            Modifier
+                .padding(6.dp)
+                .size(26.dp)
+                .align(Alignment.TopEnd)
+                .clip(CircleShape)
+                .background(chipBg)
+                .clickable { onRemove() },
+            contentAlignment = Alignment.Center
+        ) { Icon(Icons.Outlined.Close, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurface) }
     }
 }
 

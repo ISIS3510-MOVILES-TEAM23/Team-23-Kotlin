@@ -285,7 +285,7 @@ class FirestorePostsRepository(
     }
 
     /** Subir imagen a Firebase Storage **/
-    private suspend fun uploadImage(uid: String, uri: Uri): String? {
+     suspend fun uploadImage(uid: String, uri: Uri): String? {
         return try {
             val productId = UUID.randomUUID().toString()
             val fileName = "img_${System.currentTimeMillis()}.jpg"
