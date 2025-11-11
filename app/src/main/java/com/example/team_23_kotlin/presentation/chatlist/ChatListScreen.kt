@@ -149,8 +149,8 @@ private fun ChatRow(
                 .clip(RoundedCornerShape(8.dp))
         ) {
             AsyncImage(
-                model =  "https://picsum.photos/200",
-                contentDescription = null,
+                model = data.listingImageUrl ?: "https://picsum.photos/200",
+                contentDescription = "Product image",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
                 )

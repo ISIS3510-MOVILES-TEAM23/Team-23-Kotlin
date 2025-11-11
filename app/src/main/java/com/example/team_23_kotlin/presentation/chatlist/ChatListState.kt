@@ -12,6 +12,7 @@ data class ChatSummary(
     val senderName: String,
     val lastMessage: String,
     val lastTime: String,
-    val unreadCount: Int
+    val unreadCount: Int,
+    val listingImageUrl: String? = null
 )
 

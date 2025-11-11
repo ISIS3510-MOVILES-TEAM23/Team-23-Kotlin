@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Send
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.team_23_kotlin.utils.isNetworkAvailable
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,13 +37,25 @@ fun ChatScreen(
 ) {
     val vm: ChatViewModel = hiltViewModel()
     val state by vm.state.collectAsState()
+    val exportMessage by vm.exportMessage.collectAsState() // 👈 observamos el mensaje de exportación
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     // 🔹 Cargar el chat al entrar
     LaunchedEffect(chatId) {
         vm.loadChat(chatId)
     }
 
+    // 🔹 Mostrar Snackbar cuando cambie el mensaje de exportación
+    LaunchedEffect(exportMessage) {
+        exportMessage?.let { msg ->
+            scope.launch { snackbarHostState.showSnackbar(msg) }
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }, // 👈 habilitamos Snackbar
         topBar = {
             CenterAlignedTopAppBar(
                 navigationIcon = {
@@ -71,6 +85,7 @@ fun ChatScreen(
                         }
                     }
                 },
+
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.primary
@@ -170,9 +185,9 @@ fun ChatScreen(
                 }
             }
         }
-
     }
 }
+
 
 /* ---------- UI PIECES ---------- */
 

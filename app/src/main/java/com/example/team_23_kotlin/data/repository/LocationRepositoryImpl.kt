@@ -7,7 +7,9 @@ import android.util.Log
 import com.example.team_23_kotlin.domain.repository.LocationRepository
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
 class LocationRepositoryImpl(private val context: Context) : LocationRepository {
@@ -16,20 +18,38 @@ class LocationRepositoryImpl(private val context: Context) : LocationRepository 
         LocationServices.getFusedLocationProviderClient(context)
     }
 
-    @SuppressLint("MissingPermission")
-    override suspend fun getCurrentLocation(): Location? = suspendCancellableCoroutine { cont ->
-        Log.d("LocationRepo", "Getting location...") // 👈 DEBUG
+//    @SuppressLint("MissingPermission")
+//    override suspend fun getCurrentLocation(): Location? = suspendCancellableCoroutine { cont ->
+//        Log.d("LocationRepo", "Getting location...") // 👈 DEBUG
+//
+//        fusedLocationClient.lastLocation
+//            .addOnSuccessListener { location ->
+//                Log.d("LocationRepo", "Got location: $location") // 👈 DEBUG
+//                cont.resume(location)
+//            }
+//            .addOnFailureListener {
+//                Log.e("LocationRepo", "Failed to get location", it) // 👈 DEBUG
+//                cont.resume(null)
+//            }
+//    }
 
-        fusedLocationClient.lastLocation
-            .addOnSuccessListener { location ->
-                Log.d("LocationRepo", "Got location: $location") // 👈 DEBUG
-                cont.resume(location)
-            }
-            .addOnFailureListener {
-                Log.e("LocationRepo", "Failed to get location", it) // 👈 DEBUG
-                cont.resume(null)
-            }
+    @SuppressLint("MissingPermission")
+    override suspend fun getCurrentLocation(): Location? = withContext(Dispatchers.IO) {
+        suspendCancellableCoroutine { cont ->
+            Log.d("LocationRepo", "Getting location...")
+
+            fusedLocationClient.lastLocation
+                .addOnSuccessListener { location ->
+                    Log.d("LocationRepo", "Got location: $location")
+                    cont.resume(location)
+                }
+                .addOnFailureListener {
+                    Log.e("LocationRepo", "Failed to get location", it)
+                    cont.resume(null)
+                }
+        }
     }
+
 
     override fun isInCampus(location: Location?): Boolean {
         val uniLatitude = 4.6014581

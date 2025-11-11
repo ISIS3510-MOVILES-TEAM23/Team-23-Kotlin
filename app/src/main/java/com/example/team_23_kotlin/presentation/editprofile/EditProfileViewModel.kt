@@ -3,6 +3,7 @@ package com.example.team_23_kotlin.presentation.editprofile
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.team_23_kotlin.data.local.UserPreferences
 import com.example.team_23_kotlin.utils.isNetworkAvailable
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -23,84 +24,112 @@ class EditProfileViewModel @Inject constructor(
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
+    private val prefs = UserPreferences(context)
+
     private val _state = MutableStateFlow(EditProfileState())
     val state: StateFlow<EditProfileState> = _state.asStateFlow()
 
     init {
-        loadUserData()
+        // 1️⃣ Cargar siempre primero lo local
+        loadLocalData()
+        // 2️⃣ Luego intentar sincronizar con Firestore si hay conexión
+        syncLocalToRemote()
     }
 
     // ============================================================
-    // 🔹 Cargar datos del usuario (con cache Firestore)
+    // 🔹 Cargar datos locales desde DataStore
     // ============================================================
-    private fun loadUserData() {
+    private fun loadLocalData() {
         viewModelScope.launch {
-            val uid = auth.currentUser?.uid ?: return@launch
-
-            try {
-                val doc = firestore.collection("users").document(uid).get().await()
-                if (doc.exists()) {
-                    val data = doc.data ?: return@launch
-                    _state.update {
-                        it.copy(
-                            name = data["name"] as? String ?: "",
-                            email = data["email"] as? String ?: "",
-                            phone = data["phone"] as? String ?: "",
-                            role = data["role"] as? String ?: "",
-                            contactPreferences = (data["contact_preferences"] as? List<String>) ?: emptyList()
-                        )
-                    }
+            prefs.userProfile.collect { local ->
+                _state.update {
+                    it.copy(
+                        name = local.name,
+                        phone = local.phone,
+                        contactPreferences = local.contactPrefs
+                    )
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _state.update { it.copy(error = e.message ?: "Error loading profile") }
             }
         }
     }
 
     // ============================================================
-    // 🔹 Manejo de eventos
+    // 🔹 Intentar sincronizar datos locales a Firestore al iniciar
     // ============================================================
-    fun onEvent(event: EditProfileEvent) {
-        when (event) {
-            is EditProfileEvent.OnNameChanged -> _state.update { it.copy(name = event.value) }
-            is EditProfileEvent.OnEmailChanged -> _state.update { it.copy(email = event.value) }
-            is EditProfileEvent.OnPhoneChanged -> _state.update { it.copy(phone = event.value) }
-            is EditProfileEvent.OnSaveClicked -> saveChanges()
-            is EditProfileEvent.OnContactPrefsChanged -> _state.update { it.copy(contactPreferences = event.value) }
+    private fun syncLocalToRemote() {
+        viewModelScope.launch {
+            if (!isNetworkAvailable(context)) return@launch
+
+            val uid = auth.currentUser?.uid ?: return@launch
+            val local = prefs.userProfile // obtener los últimos datos locales
+
+            local.collect { data ->
+                try {
+                    val updates = mapOf(
+                        "name" to data.name,
+                        "phone" to data.phone,
+                        "contact_preferences" to data.contactPrefs,
+                        "updated_at" to com.google.firebase.Timestamp.now()
+                    )
+                    firestore.collection("users").document(uid).update(updates).await()
+                    _state.update { it.copy(success = true, error = null) }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
         }
     }
 
     // ============================================================
-    // 🔹 Guardar cambios (con verificación de red)
+    // 🔹 Manejar eventos
+    // ============================================================
+    fun onEvent(event: EditProfileEvent) {
+        when (event) {
+            is EditProfileEvent.OnNameChanged -> _state.update { it.copy(name = event.value) }
+            is EditProfileEvent.OnPhoneChanged -> _state.update { it.copy(phone = event.value) }
+            is EditProfileEvent.OnContactPrefsChanged -> _state.update { it.copy(contactPreferences = event.value) }
+            is EditProfileEvent.OnSaveClicked -> saveChanges()
+            else -> {}
+        }
+    }
+
+    // ============================================================
+    // 🔹 Guardar cambios (offline/online)
     // ============================================================
     private fun saveChanges() {
         viewModelScope.launch {
             val uid = auth.currentUser?.uid ?: return@launch
+            val s = _state.value
 
-            // 🔸 Verificar conexión antes de guardar
+            _state.update { it.copy(isSaving = true, error = null, success = false) }
+
+            // 🔸 1. Guardar SIEMPRE localmente
+            prefs.saveProfile(
+                name = s.name,
+                phone = s.phone ?: "",
+                prefs = s.contactPreferences
+            )
+
             if (!isNetworkAvailable(context)) {
+                // 🔸 2. Si no hay conexión, avisar que se guardó localmente
                 _state.update {
                     it.copy(
                         isSaving = false,
-                        success = false,
-                        error = "No internet connection. Try again when you're online."
+                        success = true,
+                        error = "Changes saved locally. Will sync when online."
                     )
                 }
                 return@launch
             }
 
-            _state.update { it.copy(isSaving = true, error = null, success = false) }
-
             try {
+                // 🔸 3. Si hay conexión, también subir a Firestore
                 val updates = mapOf(
-                    "name" to _state.value.name,
-                    "email" to _state.value.email,
-                    "phone" to _state.value.phone,
-                    "contact_preferences" to _state.value.contactPreferences,
+                    "name" to s.name,
+                    "phone" to s.phone,
+                    "contact_preferences" to s.contactPreferences,
                     "updated_at" to com.google.firebase.Timestamp.now()
                 )
-
                 firestore.collection("users").document(uid).update(updates).await()
 
                 _state.update {
@@ -116,7 +145,7 @@ class EditProfileViewModel @Inject constructor(
                     it.copy(
                         isSaving = false,
                         success = false,
-                        error = "Failed to update profile: ${e.message}"
+                        error = "Failed to sync with server: ${e.message}"
                     )
                 }
             }

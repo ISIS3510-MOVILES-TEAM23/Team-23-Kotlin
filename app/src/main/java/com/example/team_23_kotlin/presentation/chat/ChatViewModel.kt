@@ -1,7 +1,10 @@
 package com.example.team_23_kotlin.presentation.chat
 
+import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.util.LruCache
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -13,16 +16,27 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import com.google.firebase.firestore.MetadataChanges
+import com.google.gson.Gson
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
 
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatState())
     val state: StateFlow<ChatState> = _state.asStateFlow()
+    private val _exportMessage = MutableStateFlow<String?>(null)
+    val exportMessage: StateFlow<String?> = _exportMessage.asStateFlow()
+
+
+    private val messageCache = LruCache<String, List<ChatMessage>>(5)
+
+    private val gson = Gson()
 
     // =====================================================
     // 🔹 Cargar un chat específico
@@ -30,13 +44,20 @@ class ChatViewModel @Inject constructor(
     fun loadChat(chatId: String) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
+            messageCache.get(chatId)?.let { cachedMessages ->
+                _state.value = _state.value.copy(
+                    messages = cachedMessages,
+                    isLoading = false,
+                    error = null
+                )
+                Log.d("ChatViewModel", "⚡ Mensajes cargados desde memoria (LRUCache)")
+                return@launch
+            }
 
             try {
+                // Intentar cargar el chat desde Firestore
                 val chatDoc = firestore.collection("chats").document(chatId).get().await()
-                if (!chatDoc.exists()) {
-                    _state.value = _state.value.copy(error = "Chat not found", isLoading = false)
-                    return@launch
-                }
+                if (!chatDoc.exists()) throw Exception("Chat not found")
 
                 val data = chatDoc.data ?: emptyMap()
                 val productId = data["product_id"] as? String
@@ -70,10 +91,37 @@ class ChatViewModel @Inject constructor(
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                _state.value = _state.value.copy(error = e.message, isLoading = false)
+                Log.e("ChatViewModel", "Error loading from Firestore: ${e.message}")
+
+                // Si Firestore falla, intentar cargar respaldo local
+                val file = File(context.filesDir, "chat_${chatId}.json")
+                if (file.exists()) {
+                    try {
+                        val json = file.readText()
+                        val backup = gson.fromJson(json, ChatBackup::class.java)
+
+                        _state.value = _state.value.copy(
+                            header = ChatHeader(
+                                chatId = backup.chatId,
+                                peerName = backup.peerName,
+                                listingTitle = backup.listingTitle
+                            ),
+                            messages = backup.messages,
+                            isLoading = false,
+                            error = null
+                        )
+
+                        _exportMessage.value = "💾 Chat cargado desde respaldo local"
+                    } catch (ex: Exception) {
+                        _state.value = _state.value.copy(error = "Error leyendo respaldo local")
+                    }
+                } else {
+                    _state.value = _state.value.copy(error = "No se pudo cargar el chat")
+                }
             }
         }
     }
+
 
     // =====================================================
     // 🔹 Escuchar mensajes en tiempo real
@@ -108,7 +156,25 @@ class ChatViewModel @Inject constructor(
                     )
                 } ?: emptyList()
 
+                // 🔹 Guarda los mensajes en la caché
+                messageCache.put(chatId, messages)
+                Log.d("ChatViewModel", "💨 Mensajes guardados en LRUCache (${messages.size})")
+
                 _state.value = _state.value.copy(messages = messages)
+                try {
+                    val backup = ChatBackup(
+                        chatId = chatId,
+                        peerName = _state.value.header.peerName,
+                        listingTitle = _state.value.header.listingTitle,
+                        messages = messages
+                    )
+                    val file = File(context.filesDir, "chat_${chatId}.json")
+                    file.writeText(gson.toJson(backup))
+                    Log.d("ChatViewModel", "💾 Respaldo local actualizado")
+                } catch (ex: Exception) {
+                    Log.e("ChatViewModel", "Error guardando respaldo local: ${ex.message}")
+                }
+
             }
     }
 
@@ -215,5 +281,53 @@ class ChatViewModel @Inject constructor(
 
     fun clearError() {
         _state.value = _state.value.copy(error = null)
+    }
+    // =====================================================
+    // 🔹 Exportar chat a archivo local JSON
+    // =====================================================
+    fun exportChatToJson() {
+        viewModelScope.launch {
+            try {
+                val chatId = _state.value.header.chatId
+                val messages = _state.value.messages
+
+                if (messages.isEmpty()) {
+                    Log.e("ChatViewModel", "No messages to export")
+                    return@launch
+                }
+
+                val exportData = mapOf(
+                    "chatId" to chatId,
+                    "peerName" to _state.value.header.peerName,
+                    "listingTitle" to _state.value.header.listingTitle,
+                    "messages" to messages.map {
+                        mapOf(
+                            "sender" to it.senderName,
+                            "text" to it.text,
+                            "timestamp" to it.timestamp,
+                            "isMine" to it.isMine,
+                            "status" to it.deliveryStatus.name
+                        )
+                    }
+                )
+
+                val file = File(context.filesDir, "chat_${chatId}.json")
+                file.writeText(gson.toJson(exportData))
+                _exportMessage.value = "✅ Chat exportado correctamente"
+                println("✅ Chat exportado correctamente a ${file.absolutePath}")
+                Log.e("ChatViewModel", "✅ Chat exportado correctamente a ${file.absolutePath}")
+
+
+
+                // (Opcional) feedback en UI
+                _state.value = _state.value.copy(
+                    error = null
+                )
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _state.value = _state.value.copy(error = "Error al exportar chat: ${e.message}")
+            }
+        }
     }
 }

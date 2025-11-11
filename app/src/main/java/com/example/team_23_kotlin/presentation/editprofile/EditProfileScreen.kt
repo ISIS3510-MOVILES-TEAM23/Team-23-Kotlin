@@ -127,31 +127,6 @@ fun EditProfileScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-// EMAIL FIELD
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "Email",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Black,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-                TextField(
-                    value = state.email ?: "",
-                    onValueChange = { viewModel.onEvent(EditProfileEvent.OnEmailChanged(it)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(8.dp),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFF0F0F0),
-                        unfocusedContainerColor = Color(0xFFF0F0F0),
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
 // PHONE FIELD
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
