@@ -311,26 +311,34 @@ class BluetoothRepositoryImpl @Inject constructor(
 
     private fun startReadingFromSocket(socket: BluetoothSocket) {
         Log.d(TAG, "Iniciando lectura del socket...")
+
+        // Corrutina para ejecutar tareas de I/O (lectura del socket)
         readJob = CoroutineScope(Dispatchers.IO).launch {
             val buffer = ByteArray(1024)
-            var bytes: Int
             val inputStream: InputStream = socket.inputStream
 
             try {
                 while (true) {
-
-                    bytes = inputStream.read(buffer)
-
+                    // 🧠 Operación de I/O (bloqueante)
+                    val bytes = inputStream.read(buffer)
                     val message = String(buffer, 0, bytes)
                     Log.d(TAG, "Mensaje recibido: $message")
-                    _incomingMessages.emit(MessageResult.success(message))
+
+                    // ✅ Cambiamos al hilo principal para actualizar el flujo (UI o estado)
+                    withContext(Dispatchers.Main) {
+                        _incomingMessages.emit(MessageResult.success(message))
+                    }
                 }
             } catch (e: IOException) {
-                Log.e(TAG, "Error al leer mensaje: ${e.message}")
-                //_incomingMessages.emit(MessageResult.failure("Error al leer mensaje"))
+                // Si hay error, también actualizamos en Main
+                withContext(Dispatchers.Main) {
+                    Log.e(TAG, "Error al leer mensaje: ${e.message}")
+                    _incomingMessages.emit(MessageResult.failure("Error al leer mensaje"))
+                }
             }
         }
     }
+
 
 
 

@@ -2,6 +2,8 @@ package com.example.team_23_kotlin.presentation.chatlist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.team_23_kotlin.data.local.room.ChatEntity
+import com.example.team_23_kotlin.data.local.room.LocalChatRepository
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -21,7 +23,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatListViewModel @Inject constructor(
     private val auth: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val localRepo: LocalChatRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatListState())
@@ -40,6 +43,7 @@ class ChatListViewModel @Inject constructor(
 
     private var listenerRegistration: ListenerRegistration? = null
 
+
     private fun loadChats() {
         val currentUser = auth.currentUser ?: run {
             _state.update { it.copy(error = "User not logged in", isLoading = false) }
@@ -49,10 +53,31 @@ class ChatListViewModel @Inject constructor(
         val uid = currentUser.uid
         _state.update { it.copy(isLoading = true, error = null) }
 
-        // 🔹 Eliminar listener previo si ya existía
         listenerRegistration?.remove()
 
-        // 🔹 Escuchar cambios en tiempo real
+        // 🔹 Primero intenta cargar los chats locales (modo offline)
+        viewModelScope.launch {
+            val localChats = localRepo.getChats()
+            if (localChats.isNotEmpty()) {
+                _state.update {
+                    it.copy(
+                        chats = localChats.map { chat ->
+                            ChatSummary(
+                                id = chat.id,
+                                listingTitle = chat.listingTitle,
+                                senderName = chat.senderName,
+                                lastMessage = chat.lastMessage,
+                                lastTime = chat.lastTime,
+                                unreadCount = chat.unreadCount
+                            )
+                        },
+                        isLoading = false
+                    )
+                }
+            }
+        }
+
+        // 🔹 Luego escucha los cambios en Firestore (modo online)
         listenerRegistration = firestore.collection("chats")
             .whereArrayContains("participant_ids", uid)
             .addSnapshotListener { snapshot, error ->
@@ -65,41 +90,66 @@ class ChatListViewModel @Inject constructor(
                     val data = doc.data ?: return@mapNotNull null
                     val productId = data["product_id"] as? String
 
-                    var productTitle = "Product"
-                    try {
-                        if (!productId.isNullOrEmpty()) {
-                            // ⚠️ No uses await aquí (snapshotListener no soporta suspending)
-                            firestore.collection("posts").document(productId).get()
-                                .addOnSuccessListener { postDoc ->
-                                    val title = postDoc.getString("title") ?: "Product"
-                                    _state.update { s ->
-                                        val newChats = s.chats.map {
-                                            if (it.id == doc.id) it.copy(listingTitle = title) else it
-                                        }
-                                        s.copy(chats = newChats)
+                    var listingTitle = "Product"
+                    var imageUrl: String? = null
+
+                    if (!productId.isNullOrEmpty()) {
+                        firestore.collection("posts").document(productId).get()
+                            .addOnSuccessListener { postDoc ->
+                                listingTitle = postDoc.getString("title") ?: "Product"
+                                val images = postDoc.get("images") as? List<*>
+                                val imageUrl = images?.firstOrNull() as? String
+
+
+                                _state.update { s ->
+                                    val newChats = s.chats.map {
+                                        if (it.id == doc.id) it.copy(
+                                            listingTitle = listingTitle,
+                                            listingImageUrl = imageUrl
+                                        ) else it
                                     }
+                                    s.copy(chats = newChats)
                                 }
-                        }
-                    } catch (_: Exception) { }
+                            }
+                    }
 
                     ChatSummary(
                         id = doc.id,
-                        listingTitle = productTitle,
+                        listingTitle = listingTitle,
                         senderName = getParticipantName(uid, data),
                         lastMessage = data["last_message"] as? String ?: "",
                         lastTime = formatTimestamp(data["updated_at"]),
-                        unreadCount = getUnreadCountForUser(uid, data)
+                        unreadCount = getUnreadCountForUser(uid, data),
+                        listingImageUrl = imageUrl // ✅ nuevo campo
                     )
                 } ?: emptyList()
 
-                // 🔹 Ordenar por fecha de actualización
+
                 val sortedChats = chats.sortedByDescending { it.lastTime }
 
+                // 🔹 Actualiza UI
                 _state.update {
                     it.copy(chats = sortedChats, isLoading = false, error = null)
                 }
+
+                // 🔹 Guarda localmente los chats
+                viewModelScope.launch {
+                    val entities = sortedChats.map {
+                        ChatEntity(
+                            id = it.id,
+                            listingTitle = it.listingTitle,
+                            senderName = it.senderName,
+                            lastMessage = it.lastMessage,
+                            lastTime = it.lastTime,
+                            unreadCount = it.unreadCount,
+                            listingImageUrl = it.listingImageUrl
+                        )
+                    }
+                    localRepo.saveChats(entities)
+                }
             }
     }
+
 
     override fun onCleared() {
         super.onCleared()
