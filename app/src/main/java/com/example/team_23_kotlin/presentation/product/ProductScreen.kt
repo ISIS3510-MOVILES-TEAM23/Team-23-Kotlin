@@ -1,6 +1,10 @@
 package com.example.team_23_kotlin.presentation.product
 
+import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import com.example.team_23_kotlin.R
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -330,10 +334,40 @@ fun PickupPointMapModal(
 
     val isOnline = remember { mutableStateOf(isNetworkAvailable(context)) }
 
-    LaunchedEffect(Unit) {
-        snapshotFlow { isNetworkAvailable(context) }
-            .collect { isOnline.value = it }
+    DisposableEffect(Unit) {
+        val connectivityManager =
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        val networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: android.net.Network) {
+                isOnline.value = true
+                Log.d("PickupMap", "Conexión restablecida")
+            }
+
+            override fun onLost(network: android.net.Network) {
+                isOnline.value = false
+                Log.d("PickupMap", "Conexión perdida")
+            }
+        }
+
+        // Registramos el callback de red
+        connectivityManager.registerNetworkCallback(
+            NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build(),
+            networkCallback
+        )
+
+        // Cleanup cuando el composable se destruye
+        onDispose {
+            try {
+                connectivityManager.unregisterNetworkCallback(networkCallback)
+            } catch (_: Exception) {
+            }
+        }
     }
+
+
 
     // === Parsear coordenadas del destino ===
     LaunchedEffect(pickupCoords) {
@@ -361,8 +395,8 @@ fun PickupPointMapModal(
     }
 
     // === Obtener ruta desde Directions API ===
-    LaunchedEffect(currentLatLng, destinationLatLng) {
-        if (currentLatLng != null && destinationLatLng != null) {
+    LaunchedEffect(currentLatLng, destinationLatLng, isOnline.value) {
+        if (isOnline.value && currentLatLng != null && destinationLatLng != null) {
             try {
                 val url = Uri.parse(
                     "https://maps.googleapis.com/maps/api/directions/json?" +
