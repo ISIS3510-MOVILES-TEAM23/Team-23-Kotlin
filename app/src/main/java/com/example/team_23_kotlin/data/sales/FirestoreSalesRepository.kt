@@ -39,7 +39,6 @@ class FirestoreSalesRepository(
             // Obtener todas las ventas donde el usuario es el vendedor
             val salesSnapshot = db.collection(COLLECTION_SALES)
                 .whereEqualTo("seller_ref", db.document("users/$userId"))
-                .orderBy("created_at", Query.Direction.DESCENDING)
                 .limit(limit.toLong())
                 .get(Source.SERVER)
                 .await()
