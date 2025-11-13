@@ -10,14 +10,12 @@ data class SalesState(
     val error: String? = null,
     val allSales: List<SaleEntity> = emptyList(),
     val currentTab: SalesTab = SalesTab.ALL,
+
     // Estadísticas
     val totalSold: Int = 0,
-    val totalShipped: Int = 0,
+    val totalCompleted: Int = 0,
     val totalPending: Int = 0
 ) {
-    /**
-     * Filtra las ventas según la pestaña activa
-     */
     val filteredSales: List<SaleEntity>
         get() = when (currentTab) {
             SalesTab.ALL -> allSales
@@ -26,12 +24,10 @@ data class SalesState(
         }
 }
 
-/**
- * Pestañas disponibles en la pantalla de ventas
- */
 enum class SalesTab {
     ALL,
     PENDING,
     COMPLETED
 }
+
 

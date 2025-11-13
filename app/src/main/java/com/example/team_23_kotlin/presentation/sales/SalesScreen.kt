@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -150,7 +149,7 @@ private fun SalesContent(
         // Estadísticas superiores
         SalesStatsSection(
             totalSold = state.totalSold,
-            shipped = state.totalShipped,
+            completed = state.totalCompleted,
             pending = state.totalPending,
             modifier = Modifier
                 .fillMaxWidth()
@@ -192,7 +191,9 @@ private fun SalesContent(
                 items(state.filteredSales) { sale ->
                     SaleCard(
                         sale = sale,
-                        onMarkAsShipped = { onEvent(SalesEvent.OnMarkAsShipped(sale.id)) }
+                        onMarkAsCompleted = {
+                            onEvent(SalesEvent.OnMarkAsShipped(sale.id))
+                        }
                     )
                 }
             }
@@ -201,12 +202,12 @@ private fun SalesContent(
 }
 
 /**
- * Sección de estadísticas (Total Sold, Shipped, Pending)
+ * Sección de estadísticas (Total Sold, Completed, Pending)
  */
 @Composable
 private fun SalesStatsSection(
     totalSold: Int,
-    shipped: Int,
+    completed: Int,
     pending: Int,
     modifier: Modifier = Modifier
 ) {
@@ -221,8 +222,8 @@ private fun SalesStatsSection(
         )
         Spacer(modifier = Modifier.width(12.dp))
         StatCard(
-            value = shipped.toString(),
-            label = "Shipped",
+            value = completed.toString(),
+            label = "Completed",
             modifier = Modifier.weight(1f)
         )
         Spacer(modifier = Modifier.width(12.dp))
@@ -264,7 +265,7 @@ private fun StatCard(
 }
 
 /**
- * Fila de pestañas (All Orders, Pending, Completed)
+ * Fila de pestañas
  */
 @Composable
 private fun SalesTabRow(
@@ -336,7 +337,7 @@ private fun SalesTabButton(
 @Composable
 private fun SaleCard(
     sale: SaleEntity,
-    onMarkAsShipped: () -> Unit
+    onMarkAsCompleted: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -351,7 +352,7 @@ private fun SaleCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Fila superior: Imagen + Info del producto
+            // Fila superior
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -382,7 +383,7 @@ private fun SaleCard(
                     }
                 }
 
-                // Información del producto
+                // Info del producto
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -404,13 +405,13 @@ private fun SaleCard(
                     )
                 }
 
-                // Estado de la venta
+                // Estado
                 SaleStatusBadge(status = sale.status)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Información del comprador
+            // Info del comprador
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -435,18 +436,18 @@ private fun SaleCard(
                 )
             }
 
-            // Botón de acción solo si está pendiente
+            // Botón si está pendiente
             if (sale.status == "pending") {
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
-                    onClick = onMarkAsShipped,
+                    onClick = onMarkAsCompleted,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFFA726) // Naranja
+                        containerColor = Color(0xFF4CAF50) // Verde Completed
                     ),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Mark as Shipped", color = Color.White)
+                    Text("Mark as Completed", color = Color.White)
                 }
             }
         }
@@ -454,14 +455,13 @@ private fun SaleCard(
 }
 
 /**
- * Badge de estado de la venta
+ * Badge de estado
  */
 @Composable
 private fun SaleStatusBadge(status: String) {
     val (text, backgroundColor, textColor) = when (status) {
         "pending" -> Triple("Pending", Color(0xFFFFF3E0), Color(0xFFFF6F00))
-        "shipped" -> Triple("Shipped", Color(0xFFE8F5E9), Color(0xFF2E7D32))
-        "completed" -> Triple("Completed", Color(0xFFE3F2FD), Color(0xFF1976D2))
+        "completed" -> Triple("Completed", Color(0xFFE8F5E9), Color(0xFF2E7D32))
         else -> Triple(status, Color(0xFFF5F5F5), Color.Gray)
     }
 
@@ -482,11 +482,11 @@ private fun SaleStatusBadge(status: String) {
 }
 
 /**
- * Formatea una fecha para mostrarla
+ * Fecha
  */
 private fun formatDate(date: Date?): String {
     if (date == null) return "Sin fecha"
-    
+
     val now = Date()
     val diff = now.time - date.time
     val hours = diff / (1000 * 60 * 60)
@@ -502,4 +502,3 @@ private fun formatDate(date: Date?): String {
         }
     }
 }
-
