@@ -24,4 +24,7 @@ object DatabaseModule {
 
     @Provides
     fun provideChatDao(db: AppDatabase): ChatDao = db.chatDao()
+
+    @Provides
+    fun provideReceiptDao(db: AppDatabase) = db.receiptDao()
 }

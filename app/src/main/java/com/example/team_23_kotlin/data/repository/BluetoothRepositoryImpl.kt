@@ -319,12 +319,12 @@ class BluetoothRepositoryImpl @Inject constructor(
 
             try {
                 while (true) {
-                    // 🧠 Operación de I/O (bloqueante)
+
                     val bytes = inputStream.read(buffer)
                     val message = String(buffer, 0, bytes)
                     Log.d(TAG, "Mensaje recibido: $message")
 
-                    // ✅ Cambiamos al hilo principal para actualizar el flujo (UI o estado)
+
                     withContext(Dispatchers.Main) {
                         _incomingMessages.emit(MessageResult.success(message))
                     }

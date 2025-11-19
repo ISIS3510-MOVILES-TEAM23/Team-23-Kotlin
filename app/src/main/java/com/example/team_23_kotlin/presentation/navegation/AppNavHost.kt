@@ -40,6 +40,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.ui.unit.sp
 import android.net.Uri
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.remember
@@ -59,6 +61,7 @@ import com.example.team_23_kotlin.presentation.auth.SignUpScreen
 import com.example.team_23_kotlin.presentation.categories.CategoryFeedScreen
 import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseScreen
 import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseViewModel
+import com.example.team_23_kotlin.presentation.purchases.PurchasesScreen
 import com.example.team_23_kotlin.presentation.sales.SalesScreen
 
 
@@ -85,6 +88,9 @@ object Routes {
     const val CONFIRMPURCHASE = "confirmpurchase/{chatId}"
     fun confirmPurchase(chatId: String) = "confirmpurchase/${Uri.encode(chatId)}"
     const val SALES = "sales"
+
+    const val PURCHASES = "purchases"
+
 }
 
 /** ===================== Bottom Destinations ===================== **/
@@ -130,6 +136,7 @@ private val bottomDestinations = listOf(
 )
 
 /** ===================== AppNavHost con BottomBar ===================== **/
+@RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun AppNavHost(
     startPostId: String? = null,
@@ -142,7 +149,7 @@ fun AppNavHost(
 
     val noBottomBarRoutes = setOf(
         Routes.LOGIN, Routes.SIGNUP, Routes.EDIT_PROFILE,
-        Routes.CHAT, Routes.CONFIRMPURCHASE, Routes.SALES
+        Routes.CHAT, Routes.CONFIRMPURCHASE, Routes.SALES, Routes.PURCHASES
     )
 
     val backStackEntry by nav.currentBackStackEntryAsState()
@@ -330,7 +337,9 @@ fun AppNavHost(
                     onProductClick = { productId ->
                         nav.navigate("product/$productId")
                     },
-                    onGoToSales = { nav.navigate(Routes.SALES) }
+                    onGoToSales = { nav.navigate(Routes.SALES) },
+                    onGoToPurchases = { nav.navigate(Routes.PURCHASES) }
+
                 )
             }
 
@@ -417,6 +426,13 @@ fun AppNavHost(
                     onBack = { nav.popBackStack() }
                 )
             }
+
+            composable(Routes.PURCHASES) {
+                PurchasesScreen(
+                    onBack = { nav.popBackStack() }
+                )
+            }
+
         }
     }
 }
