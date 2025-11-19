@@ -8,8 +8,10 @@ import com.example.team_23_kotlin.data.repository.LocationRepositoryImpl
 import com.example.team_23_kotlin.core.network.hasInternetConnection
 import com.example.team_23_kotlin.data.local.SalesCacheStorage
 import com.example.team_23_kotlin.data.local.SharedSalesMemoryCache
+import com.example.team_23_kotlin.data.repository.PurchasesRepositoryImpl
 import com.example.team_23_kotlin.data.sales.SalesRepository
 import com.example.team_23_kotlin.data.sales.FirestoreSalesRepository
+import com.example.team_23_kotlin.domain.repository.PurchasesRepository
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Binds
 import dagger.Module
@@ -29,6 +31,13 @@ abstract class RepositoryModule {
     abstract fun bindAnalyticsRepository(
         impl: AnalyticsRepositoryImpl
     ): AnalyticsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPurchasesRepository(
+        impl: PurchasesRepositoryImpl
+    ): PurchasesRepository
+
 
     companion object {
         // 🔹 Provee LocationRepository (usa @Provides porque necesita Context)

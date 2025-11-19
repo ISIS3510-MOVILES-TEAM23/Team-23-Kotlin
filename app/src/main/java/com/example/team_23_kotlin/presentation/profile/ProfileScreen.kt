@@ -38,8 +38,10 @@ fun ProfileScreen(
     locationViewModel: LocationViewModel,
     onProductClick: (String) -> Unit,
     onGoToSales: () -> Unit = {},
+    onGoToPurchases: () -> Unit = {},   // 👈 AÑADIR ESTA LÍNEA
     viewModel: ProfileViewModel = hiltViewModel()
-) {
+)
+ {
     val state by viewModel.state.collectAsState()
     val isInCampus by locationViewModel.isInCampus.collectAsState()
     val context = LocalContext.current
@@ -231,6 +233,26 @@ fun ProfileScreen(
                                 style = MaterialTheme.typography.titleSmall
                             )
                         }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = { onGoToPurchases() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(40.dp),
+                            shape = RoundedCornerShape(7.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Text(
+                                "Purchases",
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
 
                         Spacer(modifier = Modifier.height(48.dp))
 
