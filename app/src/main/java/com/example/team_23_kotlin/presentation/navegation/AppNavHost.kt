@@ -63,6 +63,7 @@ import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseSc
 import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseViewModel
 import com.example.team_23_kotlin.presentation.purchases.PurchasesScreen
 import com.example.team_23_kotlin.presentation.sales.SalesScreen
+import com.example.team_23_kotlin.presentation.feedback.FeedbackScreen
 
 
 /** ===================== Rutas ===================== **/
@@ -90,6 +91,9 @@ object Routes {
     const val SALES = "sales"
 
     const val PURCHASES = "purchases"
+
+    const val FEEDBACK = "feedback/{purchaseId}/{sellerId}"
+    fun feedback(purchaseId: String, sellerId: String) = "feedback/${Uri.encode(purchaseId)}/${Uri.encode(sellerId)}"
 
 }
 
@@ -429,8 +433,21 @@ fun AppNavHost(
 
             composable(Routes.PURCHASES) {
                 PurchasesScreen(
-                    onBack = { nav.popBackStack() }
+                    onBack = { nav.popBackStack() },
+                    onFeedbackClick = { purchaseId, sellerId ->
+                        nav.navigate(Routes.feedback(purchaseId, sellerId))
+                    }
                 )
+            }
+
+            composable(
+                route = Routes.FEEDBACK,
+                arguments = listOf(
+                    navArgument("purchaseId") { type = NavType.StringType },
+                    navArgument("sellerId") { type = NavType.StringType }
+                )
+            ) {
+                FeedbackScreen(navController = nav)
             }
 
         }

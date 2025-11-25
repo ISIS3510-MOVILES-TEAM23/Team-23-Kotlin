@@ -133,6 +133,7 @@ class PurchasesRepositoryImpl @Inject constructor(
 
             val status = data["status"] as? String ?: "pending"
             val createdAt = (data["created_at"] as? Timestamp)?.toDate() ?: java.util.Date()
+            val hasFeedback = data["hasFeedback"] as? Boolean ?: false
 
             // 🔥 Crear entidad final
             PurchaseEntity(
@@ -147,7 +148,8 @@ class PurchasesRepositoryImpl @Inject constructor(
                 buyerId = buyerId,
                 buyerName = buyerName,
                 status = status,
-                createdAt = createdAt
+                createdAt = createdAt,
+                hasFeedback = hasFeedback
             )
 
         } catch (e: Exception) {

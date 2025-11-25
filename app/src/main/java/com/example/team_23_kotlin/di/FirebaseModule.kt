@@ -14,4 +14,5 @@ import javax.inject.Singleton
 object FirebaseModule {
     @Provides @Singleton fun provideAuth(): FirebaseAuth = FirebaseAuth.getInstance()
     @Provides @Singleton fun provideDb(): FirebaseFirestore = FirebaseFirestore.getInstance()
+    @Provides @Singleton fun provideStorage(): com.google.firebase.storage.FirebaseStorage = com.google.firebase.storage.FirebaseStorage.getInstance()
 }

@@ -35,6 +35,7 @@ import java.util.*
 @Composable
 fun PurchasesScreen(
     onBack: () -> Unit = {},
+    onFeedbackClick: (String, String) -> Unit = { _, _ -> },
     viewModel: PurchasesViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -108,6 +109,7 @@ fun PurchasesScreen(
             else -> PurchasesContent(
                 state = state,
                 onEvent = viewModel::onEvent,
+                onFeedbackClick = onFeedbackClick,
                 modifier = Modifier.padding(paddingValues)
             )
         }
@@ -118,6 +120,7 @@ fun PurchasesScreen(
 private fun PurchasesContent(
     state: PurchasesState,
     onEvent: (PurchasesEvent) -> Unit,
+    onFeedbackClick: (String, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -162,8 +165,8 @@ private fun PurchasesContent(
                         purchase = purchase,
                         onReceiptAction = {
                             onEvent(PurchasesEvent.OnDownloadReceipt(it))
-                        }
-
+                        },
+                        onFeedbackClick = { onFeedbackClick(purchase.id, purchase.sellerId) }
                     )
                 }
             }
@@ -257,7 +260,8 @@ private fun PurchasesTabButton(
 @Composable
 private fun PurchaseCard(
     purchase: PurchaseEntity,
-    onReceiptAction: (PurchaseEntity) -> Unit
+    onReceiptAction: (PurchaseEntity) -> Unit,
+    onFeedbackClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -344,6 +348,21 @@ private fun PurchaseCard(
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text("Descargar recibo", color = Color.White)
+                }
+            }
+
+            // 🌟 Botón de Feedback (para todas las compras completadas)
+            if (purchase.status == "completed") {
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onFeedbackClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(if (purchase.hasFeedback) "Editar Feedback" else "Dejar Feedback")
                 }
             }
 
