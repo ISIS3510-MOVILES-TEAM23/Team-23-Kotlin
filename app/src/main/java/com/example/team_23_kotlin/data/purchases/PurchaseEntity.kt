@@ -19,5 +19,6 @@ data class PurchaseEntity(
 
     val status: String = "pending", // pending | completed
     val createdAt: Date = Date(),
-    val isDownloaded: Boolean = false
+    val isDownloaded: Boolean = false,
+    val hasFeedback: Boolean = false
 )

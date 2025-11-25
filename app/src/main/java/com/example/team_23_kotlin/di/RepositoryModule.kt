@@ -38,6 +38,12 @@ abstract class RepositoryModule {
         impl: PurchasesRepositoryImpl
     ): PurchasesRepository
 
+    @Binds
+    @Singleton
+    abstract fun bindFeedbackRepository(
+        impl: com.example.team_23_kotlin.data.repository.FeedbackRepositoryImpl
+    ): com.example.team_23_kotlin.domain.repository.FeedbackRepository
+
 
     companion object {
         // 🔹 Provee LocationRepository (usa @Provides porque necesita Context)
