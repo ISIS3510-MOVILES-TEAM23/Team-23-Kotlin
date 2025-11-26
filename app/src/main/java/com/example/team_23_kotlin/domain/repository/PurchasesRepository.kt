@@ -11,4 +11,5 @@ interface PurchasesRepository {
     suspend fun isReceiptGenerated(purchaseId: String): Boolean
     suspend fun getAllGeneratedReceipts(): List<String>
 
+    fun invalidateCache()
 }

@@ -12,5 +12,11 @@ data class FeedbackState(
     val submitSuccess: Boolean = false,
     val existingFeedbackId: String? = null, // ID del feedback si ya existe
     val isEditMode: Boolean = false, // true si está editando, false si es nuevo
-    val isLoading: Boolean = false // true mientras carga feedback existente
+    val isLoading: Boolean = false, // true mientras carga feedback existente
+    
+    // Nuevos campos para offline support
+    val hasDraft: Boolean = false, // true si existe borrador local
+    val draftTimestamp: Long? = null, // timestamp del último guardado
+    val isOnline: Boolean = true, // estado de conectividad
+    val isSyncing: Boolean = false // true mientras sincroniza borrador
 )
