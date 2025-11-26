@@ -157,4 +157,9 @@ class PurchasesRepositoryImpl @Inject constructor(
             null
         }
     }
+
+    override fun invalidateCache() {
+        purchasesLruCache.evictAll()
+        Log.d(TAG, "✅ Purchases cache invalidated")
+    }
 }

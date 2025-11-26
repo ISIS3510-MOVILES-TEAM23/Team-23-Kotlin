@@ -2,6 +2,7 @@ package com.example.team_23_kotlin.data.repository
 
 import android.net.Uri
 import android.util.Log
+import com.example.team_23_kotlin.data.local.FeedbackLruCache
 import com.example.team_23_kotlin.data.purchases.FeedbackEntity
 import com.example.team_23_kotlin.domain.repository.FeedbackRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -58,6 +59,9 @@ class FeedbackRepositoryImpl @Inject constructor(
                 Log.w(TAG, "⚠️ Could not update purchase hasFeedback flag: ${e.message}")
             }
 
+            // 4. Invalidar cache
+            FeedbackLruCache.remove(feedback.purchaseId)
+
             Log.d(TAG, "✅ Feedback submitted successfully for purchase ${feedback.purchaseId}")
             true
         } catch (e: Exception) {
@@ -91,6 +95,9 @@ class FeedbackRepositoryImpl @Inject constructor(
                 .update(feedbackData as Map<String, Any>)
                 .await()
 
+            // Invalidar cache
+            FeedbackLruCache.remove(feedback.purchaseId)
+
             Log.d(TAG, "✅ Feedback updated successfully for purchase ${feedback.purchaseId}")
             true
         } catch (e: Exception) {
@@ -101,6 +108,13 @@ class FeedbackRepositoryImpl @Inject constructor(
 
     override suspend fun getFeedbackForPurchase(purchaseId: String): FeedbackEntity? {
         return try {
+            // 1. Intentar desde cache
+            FeedbackLruCache.get(purchaseId)?.let {
+                Log.d(TAG, "✅ Feedback loaded from cache for purchase $purchaseId")
+                return it
+            }
+
+            // 2. Consultar Firestore
             val snapshot = db.collection(COLLECTION_FEEDBACKS)
                 .whereEqualTo("purchaseId", purchaseId)
                 .limit(1)
@@ -113,7 +127,7 @@ class FeedbackRepositoryImpl @Inject constructor(
                 val doc = snapshot.documents.first()
                 val data = doc.data ?: return null
 
-                FeedbackEntity(
+                val feedback = FeedbackEntity(
                     id = doc.id,
                     purchaseId = data["purchaseId"] as? String ?: "",
                     buyerId = data["buyerId"] as? String ?: "",
@@ -123,6 +137,12 @@ class FeedbackRepositoryImpl @Inject constructor(
                     photos = (data["photos"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
                     createdAt = (data["createdAt"] as? com.google.firebase.Timestamp)?.toDate() ?: java.util.Date()
                 )
+
+                // 3. Guardar en cache
+                FeedbackLruCache.put(purchaseId, feedback)
+                Log.d(TAG, "✅ Feedback loaded from Firestore and cached for purchase $purchaseId")
+
+                feedback
             }
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error getting feedback for purchase $purchaseId", e)

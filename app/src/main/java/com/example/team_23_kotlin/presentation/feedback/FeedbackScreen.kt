@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.outlined.Close
@@ -136,8 +137,52 @@ fun FeedbackScreen(
                     .background(cs.background)
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
+                // Connectivity indicator
+                if (!state.isOnline) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFFFA726))
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Filled.CloudOff,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Sin conexión - Los cambios se guardarán localmente",
+                            color = Color.White,
+                            style = ty.bodyMedium.copy(fontWeight = FontWeight.Medium)
+                        )
+                    }
+                }
+
+                // Draft indicator
+                if (state.hasDraft && state.draftTimestamp != null) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(cs.primaryContainer)
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        state.draftTimestamp?.let { timestamp ->
+                            Text(
+                                "📝 Borrador guardado ${formatTimestamp(timestamp)}",
+                                color = cs.onPrimaryContainer,
+                                style = ty.bodySmall
+                            )
+                        }
+                    }
+                }
+
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             // Rating Section
             FieldLabel("Calificación")
             RatingSelector(
@@ -244,6 +289,7 @@ fun FeedbackScreen(
                 )
             }
         }
+            }
         }
     }
 
@@ -463,6 +509,18 @@ private fun ThumbUrl(url: String, onRemove: () -> Unit) {
         ) {
             Icon(Icons.Outlined.Close, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurface)
         }
+    }
+}
+
+private fun formatTimestamp(timestamp: Long): String {
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+    
+    return when {
+        diff < 60_000 -> "hace un momento"
+        diff < 3600_000 -> "hace ${diff / 60_000} min"
+        diff < 86400_000 -> "hace ${diff / 3600_000} h"
+        else -> "hace ${diff / 86400_000} días"
     }
 }
 
