@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.ViewModel
@@ -130,6 +131,26 @@ class PurchasesViewModel @Inject constructor(
         }
     }
 
+    private fun logReceiptEvent(
+        type: String,
+        purchase: PurchaseEntity
+    ) {
+        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+
+        val data = mapOf(
+            "event_type" to type,                 // "generate" o "open"
+            "purchase_id" to purchase.id,
+            "user_id" to com.google.firebase.auth.FirebaseAuth.getInstance().uid,
+            "timestamp" to com.google.firebase.Timestamp.now()
+        )
+
+        db.collection("receipt_feature_usage")
+            .add(data)
+
+        
+    }
+
+
 
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun generatePdfReceipt(purchase: PurchaseEntity) {
@@ -138,6 +159,8 @@ class PurchasesViewModel @Inject constructor(
             _uiEvent.emit("Generando recibo en segundo plano...")
 
             try {
+                logReceiptEvent("generate", purchase)
+
                 val pdf = android.graphics.pdf.PdfDocument()
                 val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(500, 700, 1).create()
                 val page = pdf.startPage(pageInfo)
@@ -234,6 +257,8 @@ class PurchasesViewModel @Inject constructor(
     private fun openExistingReceipt(purchase: PurchaseEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                logReceiptEvent("open", purchase)
+
                 val resolver = context.contentResolver
                 val fileName = "receipt_${purchase.id}.pdf"
 
