@@ -245,7 +245,7 @@ class FirestorePostsRepository(
     }
 
     // -----------------------------------------------------------
-    // Obtiene posts por categoría
+    // Obtiene posts por categoría (CALLBACK - mantener para compatibilidad)
     // -----------------------------------------------------------
     fun getPostsByCategories(
         categories: List<String>,
@@ -273,6 +273,32 @@ class FirestorePostsRepository(
                 Log.e("RECS", "Error buscando posts", it)
                 onResult(emptyList())
             }
+    }
+    
+    // ✅ NEW: Suspend version (OPTIMIZADO)
+    suspend fun getPostsByCategoriesSuspend(
+        categories: List<String>
+    ): List<PostEntity> {
+        if (categories.isEmpty()) return emptyList()
+
+        return try {
+            val normalized = categories.map { it.lowercase() }
+
+            val result = db.collection("posts")
+                .whereIn("category_name", normalized.take(10))
+                .get()
+                .await()
+
+            val posts = result.documents.mapNotNull { doc ->
+                doc.toObject(PostEntity::class.java)?.copy(id = doc.id)
+            }
+
+            Log.d("RECS", "✅ Posts encontrados (suspend): ${posts.size}")
+            posts
+        } catch (e: Exception) {
+            Log.e("RECS", "❌ Error buscando posts (suspend)", e)
+            emptyList()
+        }
     }
 
     /** Cargar categorías desde Firestore **/
