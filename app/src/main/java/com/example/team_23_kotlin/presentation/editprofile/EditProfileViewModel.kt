@@ -12,6 +12,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -61,24 +62,27 @@ class EditProfileViewModel @Inject constructor(
             if (!isNetworkAvailable(context)) return@launch
 
             val uid = auth.currentUser?.uid ?: return@launch
-            val local = prefs.userProfile // obtener los últimos datos locales
 
-            local.collect { data ->
-                try {
-                    val updates = mapOf(
-                        "name" to data.name,
-                        "phone" to data.phone,
-                        "contact_preferences" to data.contactPrefs,
-                        "updated_at" to com.google.firebase.Timestamp.now()
-                    )
-                    firestore.collection("users").document(uid).update(updates).await()
-                    _state.update { it.copy(success = true, error = null) }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+            // ⬇️ antes: prefs.userProfile.collect { data -> ... }
+            val data = prefs.userProfile.firstOrNull() ?: return@launch
+
+            try {
+                val updates = mapOf(
+                    "name" to data.name,
+                    "phone" to data.phone,
+                    "contact_preferences" to data.contactPrefs,
+                    "updated_at" to com.google.firebase.Timestamp.now()
+                )
+                firestore.collection("users").document(uid).update(updates).await()
+
+                _state.update { it.copy(success = true, error = null) }
+
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
+
 
     // ============================================================
     // 🔹 Manejar eventos
