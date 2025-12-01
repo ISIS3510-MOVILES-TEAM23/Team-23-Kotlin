@@ -9,6 +9,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+data class RecommendationsState(
+    val isLoading: Boolean = true,
+    val error: String? = null,
+    val posts: List<PostEntity> = emptyList()
+)
+
 class RecommendationsViewModel(
     private val postsRepo: FirestorePostsRepository,
     private val searchRepo: FirestoreSearchEventsRepository,
@@ -17,22 +23,51 @@ class RecommendationsViewModel(
 
     private val _recs = MutableStateFlow<List<PostEntity>>(emptyList())
     val recs: StateFlow<List<PostEntity>> = _recs
+    
+    private val _state = MutableStateFlow(RecommendationsState())
+    val state: StateFlow<RecommendationsState> = _state
 
     init {
         loadRecommendations()
     }
 
+    // ✅ OPTIMIZADO: Suspend functions sin callbacks
     private fun loadRecommendations() {
         viewModelScope.launch {
-            searchRepo.getTopCategoriesForUser(userId) { categories ->
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            
+            try {
+                // 1. Obtener categorías top del usuario
+                val categories = searchRepo.getTopCategoriesForUserSuspend(userId)
+                
                 if (categories.isEmpty()) {
                     _recs.value = emptyList()
-                    return@getTopCategoriesForUser
+                    _state.value = _state.value.copy(
+                        isLoading = false, 
+                        posts = emptyList()
+                    )
+                    return@launch
                 }
-                postsRepo.getPostsByCategories(categories) { posts ->
-                    _recs.value = posts
-                }
+                
+                // 2. Obtener posts de esas categorías
+                val posts = postsRepo.getPostsByCategoriesSuspend(categories)
+                
+                _recs.value = posts
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    posts = posts
+                )
+                
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Error loading recommendations"
+                )
             }
         }
+    }
+    
+    fun refresh() {
+        loadRecommendations()
     }
 }

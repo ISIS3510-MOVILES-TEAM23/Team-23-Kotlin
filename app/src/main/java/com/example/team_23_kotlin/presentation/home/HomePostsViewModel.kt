@@ -32,7 +32,8 @@ class HomePostsViewModel(
 
     init { refresh() }
 
-    fun refresh(limit: Int = 20) {
+    // ✅ OPTIMIZACIÓN: Reducir de 20 a 15 items (compromiso)
+    fun refresh(limit: Int = 15) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
