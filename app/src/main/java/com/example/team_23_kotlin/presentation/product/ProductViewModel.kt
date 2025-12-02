@@ -44,6 +44,14 @@ class ProductViewModel(
 
                 println("📦 CategoryName being logged: ${entity.categoryName}")
 
+                // Log product view for analytics (title length vs views)
+                analytics.logProductView(
+                    postId = entity.id,
+                    category = entity.categoryName,
+                    source = "product_screen"
+                )
+
+                // Log product click (existing tracking)
                 analytics.logProductClick(
                     postId = entity.id,
                     category = entity.categoryName,

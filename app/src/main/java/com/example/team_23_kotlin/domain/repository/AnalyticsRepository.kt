@@ -13,4 +13,10 @@ interface AnalyticsRepository {
         category: String,
         source: String
     )
+
+    fun logProductView(
+        postId: String,
+        category: String,
+        source: String
+    )
 }
