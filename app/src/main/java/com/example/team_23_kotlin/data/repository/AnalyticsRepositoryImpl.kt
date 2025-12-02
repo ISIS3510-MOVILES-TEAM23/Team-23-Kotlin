@@ -48,4 +48,18 @@ class AnalyticsRepositoryImpl @Inject constructor(
         )
         firestore.collection("product_click_events").add(data)
     }
+
+    override fun logProductView(postId: String, category: String, source: String) {
+        val uid = auth.currentUser?.uid ?: return
+        val data = hashMapOf(
+            "userId" to uid,
+            "timestamp" to FieldValue.serverTimestamp(),
+            "postId" to postId,
+            "category" to category,
+            "source" to source,
+            "sessionId" to UUID.randomUUID().toString(),
+            "appVersion" to BuildConfig.VERSION_NAME
+        )
+        firestore.collection("product_view_events").add(data)
+    }
 }
