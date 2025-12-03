@@ -35,6 +35,7 @@ firebaseBom = "33.3.0"
 firebaseStorageKtx = "22.0.1"
 playServicesMaps = "19.2.0"
 foundationVersion = "1.9.4"
+uiText = "1.9.5"
 runtime = "1.9.5"
 
 [libraries]
@@ -83,6 +84,7 @@ firebase-firestore-ktx = { module = "com.google.firebase:firebase-firestore-ktx"
 firebase-storage-ktx = { module = "com.google.firebase:firebase-storage-ktx" }
 gms-play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
 androidx-compose-foundation-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundationVersion" }
+androidx-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
 androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
 
 [plugins]

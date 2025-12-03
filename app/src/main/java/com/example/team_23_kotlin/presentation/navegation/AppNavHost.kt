@@ -92,6 +92,8 @@ object Routes {
     const val SALES = "sales"
 
     const val PURCHASES = "purchases"
+    const val HOT_LIST = "hot/{categoryName}"
+    fun hotList(categoryName: String) = "hot/${Uri.encode(categoryName)}"
 
     const val FEEDBACK = "feedback/{purchaseId}/{sellerId}"
     fun feedback(purchaseId: String, sellerId: String) = "feedback/${Uri.encode(purchaseId)}/${Uri.encode(sellerId)}"
@@ -392,6 +394,18 @@ fun AppNavHost(
             ) { backStackEntry ->
                 val productId = backStackEntry.arguments?.getString("productId") ?: return@composable
                 ProductScreen(productId = productId, onBack = { nav.popBackStack() }, nav = nav)
+            }
+
+            composable(
+                route = Routes.HOT_LIST,
+                arguments = listOf(navArgument("categoryName") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val categoryName = backStackEntry.arguments?.getString("categoryName") ?: return@composable
+                com.example.team_23_kotlin.presentation.product.HotListScreen(
+                    categoryName = categoryName,
+                    onBack = { nav.popBackStack() },
+                    onItemClick = { id -> nav.navigate(Routes.product(id)) }
+                )
             }
 
             composable(Routes.POST) {

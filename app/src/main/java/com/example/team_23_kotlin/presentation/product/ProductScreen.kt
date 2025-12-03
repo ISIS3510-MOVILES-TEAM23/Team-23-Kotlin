@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,9 +33,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.example.team_23_kotlin.core.network.hasInternetConnection
+import com.example.team_23_kotlin.data.local.WishlistStorage
 import com.example.team_23_kotlin.data.local.PostsCacheStorage
 import com.example.team_23_kotlin.data.local.SharedPostsMemoryCache
 import com.example.team_23_kotlin.data.posts.FirestorePostsRepository
@@ -54,6 +57,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import com.example.team_23_kotlin.presentation.navegation.Routes
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLngBounds
@@ -63,10 +67,12 @@ import com.google.maps.android.compose.Polyline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import com.google.maps.android.compose.*
-import kotlinx.coroutines.*
 import com.example.team_23_kotlin.utils.isNetworkAvailable
+import com.example.team_23_kotlin.presentation.product.HotViewModel
+import com.example.team_23_kotlin.presentation.product.HotState
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,6 +110,9 @@ fun ProductScreen(
     }
 
     val state by viewModel.state.collectAsState()
+    val wishlistStorage = remember { WishlistStorage(context.applicationContext) }
+    val wishlistIds by wishlistStorage.idsFlow.collectAsState(initial = emptySet())
+    val scope = rememberCoroutineScope()
 
     // UI (igual que la que tú ya tienes)
     Scaffold(
@@ -210,6 +219,24 @@ fun ProductScreen(
 
                         Spacer(Modifier.height(8.dp))
 
+                        // ❤️ Wishlist button
+                        val isInWishlist = wishlistIds.contains(product.id)
+                        OutlinedButton(
+                            onClick = { scope.launch(Dispatchers.IO) { wishlistStorage.toggle(product.id) } },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            val icon = if (isInWishlist) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder
+                            val label = if (isInWishlist) "Added to wishlist" else "Add to wishlist"
+                            Icon(icon, contentDescription = null, tint = if (isInWishlist) Color.Red else LocalContentColor.current)
+                            Spacer(Modifier.width(8.dp))
+                            Text(label)
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
                         // 🔹 Descripción
                         Text(
                             text = product.description,
@@ -304,6 +331,82 @@ fun ProductScreen(
                         }
 
 
+
+                        // =====================
+                        // 🔥 Hot similar products (by clicks in this category)
+                        // =====================
+                        Spacer(Modifier.height(24.dp))
+                        Text("Hot similar products", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+
+                        val hotVm: HotViewModel = viewModel(factory = object : ViewModelProvider.Factory {
+                            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                                val memory = SharedPostsMemoryCache.instance
+                                val postsRepo = FirestorePostsRepository(
+                                    FirebaseFirestore.getInstance(),
+                                    PostsCacheStorage(context.applicationContext),
+                                    memory,
+                                    isOnline = { context.hasInternetConnection() }
+                                )
+                                @Suppress("UNCHECKED_CAST")
+                                return HotViewModel(
+                                    context.applicationContext,
+                                    FirebaseFirestore.getInstance(),
+                                    postsRepo,
+                                    PostsCacheStorage(context.applicationContext),
+                                    memory
+                                ) as T
+                            }
+                        })
+                        LaunchedEffect(product.id, product.categoryName) {
+                            hotVm.load(categoryName = product.categoryName, excludeId = product.id, limit = 6)
+                        }
+                        val hot by hotVm.state.collectAsState()
+                        if (hot.items.isNotEmpty()) {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                items(hot.items.size) { idx ->
+                                    val p = hot.items[idx]
+                                    ElevatedCard(
+                                        onClick = { nav.navigate("product/${p.id}") },
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+                                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                                        modifier = Modifier.width(180.dp)
+                                    ) {
+                                        AsyncImage(
+                                            model = p.images.firstOrNull(),
+                                            contentDescription = p.title,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .aspectRatio(1f) // square for consistent size
+                                                .clip(RoundedCornerShape(12.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                        Column(Modifier.padding(8.dp)) {
+                                            Text(p.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
+                                            Text("$${p.price}", style = MaterialTheme.typography.bodySmall)
+                                        }
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            TextButton(
+                                onClick = {
+                                    nav.navigate("hot/${Uri.encode(product.categoryName)}")
+                                },
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Text("View all")
+                            }
+                        } else {
+                            // Offline and no cache yet → guidance text
+                            if (!context.hasInternetConnection()) {
+                                Text(
+                                    "No connection — reconnect to see hot similar products.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
 
                         Spacer(Modifier.height(20.dp))
 
