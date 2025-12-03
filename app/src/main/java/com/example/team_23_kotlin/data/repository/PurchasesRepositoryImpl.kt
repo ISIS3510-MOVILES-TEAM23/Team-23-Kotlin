@@ -33,15 +33,19 @@ class PurchasesRepositoryImpl @Inject constructor(
 
     @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun getPurchases(): List<PurchaseEntity> {
-        // 1. Si ya tenemos cache, devolverla inmediatamente
-        if (purchasesLruCache.size() > 0) {
-            val cachedList = purchasesLruCache.snapshot().values.toList()
-            if (cachedList.isNotEmpty()) return cachedList
+
+        val cachedList = purchasesLruCache.snapshot().values.toList()
+
+        // 🔥 1. Primero devolver cache (fast UI)
+        if (cachedList.isNotEmpty()) {
+            // Pero NO retornamos aún...
+            // dejamos que siga a intentar servidor
         }
 
         return try {
-            val uid = FirebaseAuth.getInstance().uid ?: return emptyList()
+            val uid = FirebaseAuth.getInstance().uid ?: return cachedList
 
+            // 🔥 2. Intentar refrescar desde servidor siempre que sea posible
             val snapshot = db.collection(COLLECTION_SALES)
                 .whereEqualTo("buyer_ref", db.document("$COLLECTION_USERS/$uid"))
                 .get(Source.SERVER)
@@ -51,7 +55,8 @@ class PurchasesRepositoryImpl @Inject constructor(
                 mapToPurchaseEntity(doc)
             }
 
-            // 🔥 GUARDAR EN CACHE LRU
+            // 🔥 3. Actualizar cache con los nuevos datos
+            purchasesLruCache.evictAll()
             purchases.forEach { purchase ->
                 purchasesLruCache.put(purchase.id, purchase)
             }
@@ -60,17 +65,11 @@ class PurchasesRepositoryImpl @Inject constructor(
 
         } catch (e: Exception) {
 
-            // 🔥 Si falla Firestore: regresar lo que haya en cache
-            val cached = mutableListOf<PurchaseEntity>()
-            for (key in purchasesLruCache.snapshot().keys) {
-                purchasesLruCache.get(key)?.let { cached.add(it) }
-            }
-
-            if (cached.isNotEmpty()) return cached
-
-            emptyList()
+            // ❗ 4. Si falla servidor → usar cache como fallback
+            if (cachedList.isNotEmpty()) cachedList else emptyList()
         }
     }
+
 
 
     override suspend fun savePurchasesToLocal(purchases: List<PurchaseEntity>) {

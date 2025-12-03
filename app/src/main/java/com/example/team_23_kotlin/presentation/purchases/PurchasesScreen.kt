@@ -52,7 +52,7 @@ fun PurchasesScreen(
             }
         } else {
             wasOffline = true
-            snackbarHostState.showSnackbar("Conexión perdida. Mostrando compras guardadas.")
+            snackbarHostState.showSnackbar("Conexión perdida. Mostrando compras guardadas. Solo verás las últimas 10 compras en modo offline!")
         }
     }
     val context = LocalContext.current

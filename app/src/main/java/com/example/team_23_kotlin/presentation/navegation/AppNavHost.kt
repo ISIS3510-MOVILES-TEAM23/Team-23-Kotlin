@@ -64,6 +64,7 @@ import com.example.team_23_kotlin.presentation.confirmpurchase.ConfirmPurchaseVi
 import com.example.team_23_kotlin.presentation.purchases.PurchasesScreen
 import com.example.team_23_kotlin.presentation.sales.SalesScreen
 import com.example.team_23_kotlin.presentation.feedback.FeedbackScreen
+import com.example.team_23_kotlin.presentation.reviews.ReviewsScreen
 
 
 /** ===================== Rutas ===================== **/
@@ -94,6 +95,9 @@ object Routes {
 
     const val FEEDBACK = "feedback/{purchaseId}/{sellerId}"
     fun feedback(purchaseId: String, sellerId: String) = "feedback/${Uri.encode(purchaseId)}/${Uri.encode(sellerId)}"
+
+    const val REVIEWS = "reviews/{postId}"
+    fun reviews(postId: String) = "reviews/${Uri.encode(postId)}"
 
 }
 
@@ -449,6 +453,18 @@ fun AppNavHost(
             ) {
                 FeedbackScreen(navController = nav)
             }
+
+            composable(
+                route = Routes.REVIEWS,
+                arguments = listOf(navArgument("postId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val postId = backStackEntry.arguments?.getString("postId") ?: return@composable
+                ReviewsScreen(
+                    postId = postId,
+                    onBack = { nav.popBackStack() }
+                )
+            }
+
 
         }
     }
