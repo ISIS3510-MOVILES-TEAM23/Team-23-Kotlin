@@ -256,9 +256,9 @@ fun ProfileScreen(
 
                         Spacer(modifier = Modifier.height(48.dp))
 
-                        // 🆕 Tabs para My Products y Drafts
+                        // 🆕 Tabs para My Products, Drafts y Wishlist
                         var selectedTab by remember { mutableStateOf(0) }
-                        val tabs = listOf("My Products", "Drafts")
+                        val tabs = listOf("My Products", "Drafts", "Wishlist")
 
                         TabRow(
                             selectedTabIndex = selectedTab,
@@ -336,6 +336,13 @@ fun ProfileScreen(
                                         }
                                     }
                                 }
+                            }
+
+                            2 -> {
+                                // 🔹 Wishlist
+                                com.example.team_23_kotlin.presentation.wishlist.WishlistScreen(
+                                    onItemClick = { id -> onProductClick(id) }
+                                )
                             }
                         }
                     }

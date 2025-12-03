@@ -35,6 +35,7 @@ class ProductViewModel(
                     description = entity.description,
                     price = "$${entity.price}",
                     images = entity.images,
+                    categoryName = entity.categoryName,
                     sellerName = sellerName,
                     sellerRating = 4.5f,
                     sellerId = entity.userId,
