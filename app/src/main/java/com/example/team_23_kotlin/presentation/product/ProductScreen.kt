@@ -58,6 +58,7 @@ import android.util.Log
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
+import com.example.team_23_kotlin.presentation.navegation.Routes
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.MapProperties
@@ -408,6 +409,27 @@ fun ProductScreen(
                         }
 
                         Spacer(Modifier.height(20.dp))
+
+// ⭐ NEW: See Reviews Button
+                        Button(
+                            onClick = {
+                                state.product?.let { product ->
+                                    nav.navigate(Routes.reviews(product.id))
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiary
+                            )
+                        ) {
+                            Text("See Reviews", style = MaterialTheme.typography.titleSmall)
+                        }
+
+                        Spacer(Modifier.height(20.dp))
+
                     }
                 }
             }
